@@ -53,8 +53,8 @@
         .simulation-title { text-align: center; margin-bottom: 20px; font-size: 1.8em; }
         .download-btn { padding: 10px 20px; background: linear-gradient(45deg, #4ecdc4, #44a08d);
                         border: none; border-radius: 15px; color: white; cursor: pointer;
-                        font-size: 14px; margin-top: 10px; display: inline-block; width: 100%;
-                        text-align: center; transition: transform 0.3s; }
+                        font-size: 14px; margin-top: 10px; display: inline-block; width: 48%;
+                        text-align: center; transition: transform 0.3s; margin-left: 1%; margin-right: 1%; }
         .download-btn:hover { transform: scale(1.05); }
         .download-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         
@@ -148,25 +148,29 @@
             <div class="crypto-card">
                 <h3>🔒 AES-GCM</h3>
                 <div class="result" id="aes-result">Click AES to encrypt</div>
-                <button class="download-btn" id="aes-download" onclick="downloadResult('aes')" disabled>📥 Download AES Result</button>
+                <button class="download-btn" id="aes-download" onclick="downloadResult('aes')" disabled>� Download Report</button>
+                <button class="download-btn" id="aes-download-binary" onclick="downloadBinary('aes')" disabled>📦 Download Encrypted File</button>
             </div>
             
             <div class="crypto-card">
                 <h3>🗝️ RSA OAEP</h3>
                 <div class="result" id="rsa-result">Click RSA to encrypt</div>
-                <button class="download-btn" id="rsa-download" onclick="downloadResult('rsa')" disabled>📥 Download RSA Result</button>
+                <button class="download-btn" id="rsa-download" onclick="downloadResult('rsa')" disabled>📄 Download Report</button>
+                <button class="download-btn" id="rsa-download-binary" onclick="downloadBinary('rsa')" disabled>📦 Download Encrypted File</button>
             </div>
             
             <div class="crypto-card">
                 <h3>🤝 ECDH</h3>
                 <div class="result" id="ecdh-result">Click ECDH for key exchange</div>
-                <button class="download-btn" id="ecdh-download" onclick="downloadResult('ecdh')" disabled>📥 Download ECDH Result</button>
+                <button class="download-btn" id="ecdh-download" onclick="downloadResult('ecdh')" disabled>📄 Download Report</button>
+                <button class="download-btn" id="ecdh-download-binary" onclick="downloadBinary('ecdh')" disabled>📦 Download Key File</button>
             </div>
             
             <div class="crypto-card">
                 <h3>🔢 SHA-256</h3>
                 <div class="result" id="hash-result">Click Hash to generate</div>
-                <button class="download-btn" id="hash-download" onclick="downloadResult('hash')" disabled>📥 Download Hash Result</button>
+                <button class="download-btn" id="hash-download" onclick="downloadResult('hash')" disabled>📄 Download Report</button>
+                <button class="download-btn" id="hash-download-binary" onclick="downloadBinary('hash')" disabled>📦 Download Hash File</button>
             </div>
         </div>
     </div>
@@ -179,6 +183,7 @@
             ecdh: null,
             hash: null
         };
+        let currentInputData = null;  // Store current input data for binary downloads
         let currentSimulation = null;  // Store current simulation data
         let currentSimulationTitle = null;
 
@@ -260,6 +265,8 @@
         async function runAESWithSimulation() {
             try {
                 const inputData = await getInputData();
+                currentInputData = inputData;  // Store for binary download
+                
                 const simResult = await callAPI('aes-simulate', inputData);
                 
                 if (simResult.success) {
@@ -274,6 +281,7 @@
                             `Tag: ${encResult.tag.substring(0, 24)}...<br>` +
                             `<details><summary>Encrypted Data</summary><div style="max-height:100px;overflow-y:auto;font-size:10px;word-break:break-all;">${encResult.encrypted}</div></details>`;
                         document.getElementById('aes-download').disabled = false;
+                        document.getElementById('aes-download-binary').disabled = false;
                     }
                 } else {
                     alert('Error: ' + simResult.error);
@@ -286,6 +294,8 @@
         async function runRSAWithSimulation() {
             try {
                 const inputData = await getInputData();
+                currentInputData = inputData;  // Store for binary download
+                
                 const simResult = await callAPI('rsa-simulate', inputData);
                 
                 if (simResult.success) {
@@ -299,6 +309,7 @@
                             `Keygen: ${encResult.keygenTime}ms<br>` +
                             `<details><summary>Encrypted Data</summary><div style="max-height:100px;overflow-y:auto;font-size:10px;word-break:break-all;">${encResult.encrypted}</div></details>`;
                         document.getElementById('rsa-download').disabled = false;
+                        document.getElementById('rsa-download-binary').disabled = false;
                     }
                 } else {
                     alert('Error: ' + simResult.error);
@@ -323,6 +334,7 @@
                             `Key Length: ${result.sharedKeyLength} bytes<br>` +
                             `<details><summary>Shared Key</summary><div style="max-height:100px;overflow-y:auto;font-size:10px;word-break:break-all;">${result.sharedKey}</div></details>`;
                         document.getElementById('ecdh-download').disabled = false;
+                        document.getElementById('ecdh-download-binary').disabled = false;
                     }
                 } else {
                     alert('Error: ' + simResult.error);
@@ -335,6 +347,8 @@
         async function runHashWithSimulation() {
             try {
                 const inputData = await getInputData();
+                currentInputData = inputData;  // Store for binary download
+                
                 const simResult = await callAPI('hash-simulate', inputData);
                 
                 if (simResult.success) {
@@ -348,6 +362,7 @@
                             `Time: ${result.hashTime}ms<br>` +
                             `<details><summary>SHA-256 Hash</summary><div style="max-height:100px;overflow-y:auto;font-size:10px;word-break:break-all;">${result.hash}</div></details>`;
                         document.getElementById('hash-download').disabled = false;
+                        document.getElementById('hash-download-binary').disabled = false;
                     }
                 } else {
                     alert('Error: ' + simResult.error);
@@ -485,6 +500,73 @@ ${result.hash}
             document.body.appendChild(element);
             element.click();
             document.body.removeChild(element);
+        }
+        
+        async function downloadBinary(technique) {
+            try {
+                let endpoint = '';
+                let inputData = null;
+                
+                if (technique === 'aes' || technique === 'rsa' || technique === 'hash') {
+                    if (!currentInputData) {
+                        alert('No input data available. Please run encryption first.');
+                        return;
+                    }
+                    inputData = currentInputData;
+                }
+                
+                // Map technique to endpoint
+                const endpointMap = {
+                    'aes': 'download-aes-binary',
+                    'rsa': 'download-rsa-binary',
+                    'ecdh': 'download-ecdh-binary',
+                    'hash': 'download-hash-binary'
+                };
+                
+                endpoint = endpointMap[technique];
+                
+                // Make API call
+                const response = await fetch(`/api/${endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(inputData || {})
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to download encrypted file');
+                }
+                
+                // Get the blob from response
+                const blob = await response.blob();
+                
+                // Extract filename from Content-Disposition header or use default
+                const contentDisposition = response.headers.get('Content-Disposition');
+                let filename = `encrypted_${technique}_${Date.now()}.enc`;
+                
+                if (contentDisposition) {
+                    const filenameMatch = contentDisposition.match(/filename="?(.+)"?/i);
+                    if (filenameMatch && filenameMatch[1]) {
+                        filename = filenameMatch[1];
+                    }
+                }
+                
+                // Create download link
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                
+                // Clean up
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+            } catch (error) {
+                alert('Error downloading binary file: ' + error.message);
+                console.error('Download error:', error);
+            }
         }
         
         // Animation System

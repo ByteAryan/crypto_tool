@@ -1,8 +1,10 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 import base64
 import hashlib
 import secrets
 import time
+import io
+import json
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa, padding, ec
@@ -547,7 +549,158 @@ def hash_data():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+@app.route('/api/download-aes-binary', methods=['POST'])
+def download_aes_binary():
+    """Download AES encrypted file as binary"""
+    try:
+        data = request.json
+        input_bytes = base64.b64decode(data['data']) if data['type'] == 'file' else data['data'].encode('utf-8')
+        key, iv = secrets.token_bytes(32), secrets.token_bytes(12)
+        
+        cipher = Cipher(algorithms.AES(key), modes.GCM(iv), backend=default_backend())
+        encryptor = cipher.encryptor()
+        encrypted_data = encryptor.update(input_bytes) + encryptor.finalize()
+        tag = encryptor.tag
+        
+        # Create a JSON structure with all necessary data for decryption
+        output_data = {
+            'iv': iv.hex(),
+            'tag': tag.hex(),
+            'key': key.hex(),  # In production, keys should NOT be included in output
+            'ciphertext': base64.b64encode(encrypted_data).decode('utf-8'),
+            'original_name': data.get('name', 'unknown'),
+            'algorithm': 'AES-256-GCM'
+        }
+        
+        # Convert to bytes
+        output_bytes = json.dumps(output_data, indent=2).encode('utf-8')
+        
+        return send_file(
+            io.BytesIO(output_bytes),
+            mimetype='application/octet-stream',
+            as_attachment=True,
+            download_name=f"encrypted_aes_{int(time.time())}.enc"
+        )
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/download-rsa-binary', methods=['POST'])
+def download_rsa_binary():
+    """Download RSA encrypted file as binary"""
+    try:
+        data = request.json
+        input_bytes = base64.b64decode(data['data']) if data['type'] == 'file' else data['data'].encode('utf-8')
+        
+        if len(input_bytes) > 190:
+            raise Exception(f"RSA max 190 bytes. Input: {len(input_bytes)} bytes")
+        
+        private_key = rsa.generate_private_key(65537, 2048, default_backend())
+        public_key = private_key.public_key()
+        
+        encrypted_data = public_key.encrypt(input_bytes, padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(), label=None
+        ))
+        
+        # Serialize private key for decryption (in production, handle keys securely)
+        private_pem = private_key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption()
+        )
+        
+        output_data = {
+            'ciphertext': base64.b64encode(encrypted_data).decode('utf-8'),
+            'private_key': private_pem.decode('utf-8'),
+            'original_name': data.get('name', 'unknown'),
+            'algorithm': 'RSA-2048-OAEP'
+        }
+        
+        output_bytes = json.dumps(output_data, indent=2).encode('utf-8')
+        
+        return send_file(
+            io.BytesIO(output_bytes),
+            mimetype='application/octet-stream',
+            as_attachment=True,
+            download_name=f"encrypted_rsa_{int(time.time())}.enc"
+        )
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/download-ecdh-binary', methods=['POST'])
+def download_ecdh_binary():
+    """Download ECDH shared key as binary"""
+    try:
+        alice_private = ec.generate_private_key(ec.SECP256R1(), default_backend())
+        bob_private = ec.generate_private_key(ec.SECP256R1(), default_backend())
+        
+        alice_shared = alice_private.exchange(ec.ECDH(), bob_private.public_key())
+        bob_shared = bob_private.exchange(ec.ECDH(), alice_private.public_key())
+        
+        # Serialize keys
+        alice_private_pem = alice_private.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption()
+        )
+        
+        bob_private_pem = bob_private.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption()
+        )
+        
+        output_data = {
+            'shared_secret': alice_shared.hex(),
+            'shared_key_length': len(alice_shared),
+            'alice_private_key': alice_private_pem.decode('utf-8'),
+            'bob_private_key': bob_private_pem.decode('utf-8'),
+            'key_agreement': alice_shared == bob_shared,
+            'algorithm': 'ECDH-SECP256R1'
+        }
+        
+        output_bytes = json.dumps(output_data, indent=2).encode('utf-8')
+        
+        return send_file(
+            io.BytesIO(output_bytes),
+            mimetype='application/octet-stream',
+            as_attachment=True,
+            download_name=f"ecdh_key_exchange_{int(time.time())}.key"
+        )
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/download-hash-binary', methods=['POST'])
+def download_hash_binary():
+    """Download hash as binary file"""
+    try:
+        data = request.json
+        input_bytes = base64.b64decode(data['data']) if data['type'] == 'file' else data['data'].encode('utf-8')
+        
+        hash_digest = hashlib.sha256(input_bytes).hexdigest()
+        hash_bytes = bytes.fromhex(hash_digest)
+        
+        output_data = {
+            'hash_hex': hash_digest,
+            'hash_base64': base64.b64encode(hash_bytes).decode('utf-8'),
+            'original_name': data.get('name', 'unknown'),
+            'original_size': data.get('size', 0),
+            'algorithm': 'SHA-256'
+        }
+        
+        output_bytes = json.dumps(output_data, indent=2).encode('utf-8')
+        
+        return send_file(
+            io.BytesIO(output_bytes),
+            mimetype='application/octet-stream',
+            as_attachment=True,
+            download_name=f"hash_sha256_{int(time.time())}.hash"
+        )
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
 if __name__ == '__main__':
+    app.run(debug=True, port=5000)
     print("🔐 Crypto Tool Server Starting...")
     print("Open: http://localhost:5000")
     app.run(debug=True, host='0.0.0.0', port=5000)
