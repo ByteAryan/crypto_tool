@@ -125,27 +125,11 @@
                 </div>
             </div>
             
-            <div class="input-group">
-                <label for="algorithmSelect">Select Algorithm:</label>
-                <select id="algorithmSelect" style="width: 100%; padding: 15px; border: none; border-radius: 10px; 
-                                                      background: rgba(255,255,255,0.1); color: white; font-size: 16px;">
-                    <option value="aes">🔒 AES-GCM (Symmetric)</option>
-                    <option value="des">🔐 DES (Symmetric)</option>
-                    <option value="3des">🔏 3DES (Symmetric)</option>
-                    <option value="blowfish">🐡 Blowfish (Symmetric)</option>
-                    <option value="chacha20">🎲 ChaCha20 (Symmetric)</option>
-                    <option value="rsa">🗝️ RSA-OAEP (Asymmetric)</option>
-                    <option value="ecc">🔑 ECC (Asymmetric)</option>
-                    <option value="playfair">📝 Playfair (Classical)</option>
-                    <option value="hill">⛰️ Hill Cipher (Classical)</option>
-                    <option value="vigenere">🔤 Vigenère (Classical)</option>
-                    <option value="railfence">🚂 Rail Fence (Classical)</option>
-                    <option value="columnar">📊 Columnar (Classical)</option>
-                </select>
-            </div>
-            
-            <div style="text-align: center; margin-top: 20px;">
-                <button class="btn" onclick="runEncryptWithSimulation()">🔬 Encrypt & Simulate</button>
+            <div style="text-align: center;">
+                <button class="btn" onclick="runAESWithSimulation()">🔬 AES & Simulate</button>
+                <button class="btn" onclick="runRSAWithSimulation()">🗝️ RSA & Simulate</button>
+                <button class="btn" onclick="runECDHWithSimulation()">🤝 ECDH & Simulate</button>
+                <button class="btn" onclick="runHashWithSimulation()">🔢 Hash & Simulate</button>
             </div>
         </div>
         
@@ -153,23 +137,13 @@
         <div class="input-section">
             <h2 style="text-align: center; margin-bottom: 20px;">🔓 Decryption</h2>
             
-            <div class="input-group">
-                <label for="decryptAlgorithmSelect">Select Decryption Algorithm:</label>
-                <select id="decryptAlgorithmSelect" style="width: 100%; padding: 15px; border: none; border-radius: 10px; 
-                                                             background: rgba(255,255,255,0.1); color: white; font-size: 16px;">
-                    <option value="aes">🔒 AES-GCM</option>
-                    <option value="des">🔐 DES</option>
-                    <option value="3des">🔏 3DES</option>
-                    <option value="blowfish">🐡 Blowfish</option>
-                    <option value="chacha20">🎲 ChaCha20</option>
-                    <option value="rsa">🗝️ RSA-OAEP</option>
-                    <option value="ecc">🔑 ECC</option>
-                    <option value="playfair">📝 Playfair</option>
-                    <option value="hill">⛰️ Hill Cipher</option>
-                    <option value="vigenere">🔤 Vigenère</option>
-                    <option value="railfence">🚂 Rail Fence</option>
-                    <option value="columnar">📊 Columnar</option>
-                </select>
+            <div style="display: flex; gap: 10px; margin-bottom: 20px; align-items: center;">
+                <label style="margin: 0;">
+                    <input type="radio" name="decryptMode" value="aes" checked onchange="toggleDecryptMode()"> AES-GCM
+                </label>
+                <label style="margin: 0;">
+                    <input type="radio" name="decryptMode" value="rsa" onchange="toggleDecryptMode()"> RSA-OAEP
+                </label>
             </div>
             
             <div class="input-group">
@@ -208,13 +182,33 @@
             </div>
         </div>
         
-        <div class="input-section">
-            <h2 style="text-align: center; margin-bottom: 20px;" id="resultTitle">📊 Results</h2>
-            <div class="crypto-card" style="width: 100%;">
-                <h3 id="result-algorithm-name">Select an algorithm and encrypt</h3>
-                <div class="result" id="crypto-result">Results will appear here after encryption</div>
-                <button class="download-btn" id="result-download" onclick="downloadResult()" disabled style="width: 48%;">📄 Download Report</button>
-                <button class="download-btn" id="result-download-binary" onclick="downloadBinary()" disabled style="width: 48%;">📦 Download Encrypted File</button>
+        <div class="crypto-ops">
+            <div class="crypto-card">
+                <h3>🔒 AES-GCM</h3>
+                <div class="result" id="aes-result">Click AES to encrypt</div>
+                <button class="download-btn" id="aes-download" onclick="downloadResult('aes')" disabled>� Download Report</button>
+                <button class="download-btn" id="aes-download-binary" onclick="downloadBinary('aes')" disabled>📦 Download Encrypted File</button>
+            </div>
+            
+            <div class="crypto-card">
+                <h3>🗝️ RSA OAEP</h3>
+                <div class="result" id="rsa-result">Click RSA to encrypt</div>
+                <button class="download-btn" id="rsa-download" onclick="downloadResult('rsa')" disabled>📄 Download Report</button>
+                <button class="download-btn" id="rsa-download-binary" onclick="downloadBinary('rsa')" disabled>📦 Download Encrypted File</button>
+            </div>
+            
+            <div class="crypto-card">
+                <h3>🤝 ECDH</h3>
+                <div class="result" id="ecdh-result">Click ECDH for key exchange</div>
+                <button class="download-btn" id="ecdh-download" onclick="downloadResult('ecdh')" disabled>📄 Download Report</button>
+                <button class="download-btn" id="ecdh-download-binary" onclick="downloadBinary('ecdh')" disabled>📦 Download Key File</button>
+            </div>
+            
+            <div class="crypto-card">
+                <h3>🔢 SHA-256</h3>
+                <div class="result" id="hash-result">Click Hash to generate</div>
+                <button class="download-btn" id="hash-download" onclick="downloadResult('hash')" disabled>📄 Download Report</button>
+                <button class="download-btn" id="hash-download-binary" onclick="downloadBinary('hash')" disabled>📦 Download Hash File</button>
             </div>
         </div>
     </div>
@@ -223,8 +217,12 @@
         let selectedFile = null;
         let selectedEncryptedFile = null;
         let decryptedData = null;
-        let currentResult = null;  // Store current encryption result
-        let currentAlgorithm = null;  // Store current algorithm
+        let results = {
+            aes: null,
+            rsa: null,
+            ecdh: null,
+            hash: null
+        };
         let currentInputData = null;  // Store current input data for binary downloads
         let currentSimulation = null;  // Store current simulation data
         let currentSimulationTitle = null;
@@ -236,20 +234,11 @@
             if (mode === 'text') selectedFile = null;
         }
         
-        const algorithmTitles = {
-            'aes': '🔒 AES-GCM',
-            'des': '🔐 DES',
-            '3des': '🔏 3DES',
-            'blowfish': '🐡 Blowfish',
-            'chacha20': '🎲 ChaCha20',
-            'rsa': '🗝️ RSA-OAEP',
-            'ecc': '🔑 ECC',
-            'playfair': '📝 Playfair',
-            'hill': '⛰️ Hill Cipher',
-            'vigenere': '🔤 Vigenère',
-            'railfence': '🚂 Rail Fence',
-            'columnar': '📊 Columnar'
-        };
+        function toggleDecryptMode() {
+            // Currently just switches between AES and RSA - functionality is the same
+            const mode = document.querySelector('input[name="decryptMode"]:checked').value;
+            // Could add mode-specific UI changes here if needed
+        }
 
         function handleFileSelect() {
             const file = document.getElementById('fileInput').files[0];
@@ -290,24 +279,11 @@
                         document.getElementById('encryptedAlgorithm').textContent = encryptedData.algorithm || 'Unknown';
                         document.getElementById('encryptedFileInfo').style.display = 'block';
                         
-                        // Auto-select the correct decryption algorithm based on file metadata
-                        if (encryptedData.algorithm) {
-                            const algo = encryptedData.algorithm.toLowerCase();
-                            const select = document.getElementById('decryptAlgorithmSelect');
-                            
-                            // Map algorithm names to dropdown values
-                            if (algo.includes('aes')) select.value = 'aes';
-                            else if (algo.includes('des') && algo.includes('3')) select.value = '3des';
-                            else if (algo.includes('des')) select.value = 'des';
-                            else if (algo.includes('blowfish')) select.value = 'blowfish';
-                            else if (algo.includes('chacha20')) select.value = 'chacha20';
-                            else if (algo.includes('rsa')) select.value = 'rsa';
-                            else if (algo.includes('ecc')) select.value = 'ecc';
-                            else if (algo.includes('playfair')) select.value = 'playfair';
-                            else if (algo.includes('hill')) select.value = 'hill';
-                            else if (algo.includes('vigenere') || algo.includes('vigenère')) select.value = 'vigenere';
-                            else if (algo.includes('railfence') || algo.includes('rail')) select.value = 'railfence';
-                            else if (algo.includes('columnar')) select.value = 'columnar';
+                        // Auto-select the correct decryption mode
+                        if (encryptedData.algorithm && encryptedData.algorithm.includes('AES')) {
+                            document.querySelector('input[name="decryptMode"][value="aes"]').checked = true;
+                        } else if (encryptedData.algorithm && encryptedData.algorithm.includes('RSA')) {
+                            document.querySelector('input[name="decryptMode"][value="rsa"]').checked = true;
                         }
                     } catch (error) {
                         alert('Error reading encrypted file: ' + error.message);
@@ -334,10 +310,10 @@
                     return;
                 }
                 
-                const algorithm = document.getElementById('decryptAlgorithmSelect').value;
+                const mode = document.querySelector('input[name="decryptMode"]:checked').value;
                 const encryptedFile = JSON.stringify(selectedEncryptedFile.data);
                 
-                let endpoint = `decrypt-${algorithm}`;
+                let endpoint = mode === 'aes' ? 'decrypt-aes' : 'decrypt-rsa';
                 
                 const result = await callAPI(endpoint, { encryptedFile: encryptedFile });
                 
@@ -454,52 +430,107 @@
             }
         }
 
-        async function runEncryptWithSimulation() {
+        async function runAESWithSimulation() {
             try {
-                const algorithm = document.getElementById('algorithmSelect').value;
                 const inputData = await getInputData();
-                currentInputData = inputData;
-                currentAlgorithm = algorithm;
+                currentInputData = inputData;  // Store for binary download
                 
-                const simResult = await callAPI(`${algorithm}-simulate`, inputData);
+                const simResult = await callAPI('aes-simulate', inputData);
                 
                 if (simResult.success) {
-                    const title = `🔬 ${algorithmTitles[algorithm]} Encryption Simulation`;
-                    displaySimulation(title, simResult);
-                    
-                    const encResult = await callAPI(algorithm, inputData);
+                    displaySimulation('🔬 AES-GCM Encryption Simulation', simResult.simulation);
+                    const encResult = await callAPI('aes', inputData);
                     
                     if (encResult.success) {
-                        currentResult = encResult;
-                        document.getElementById('result-algorithm-name').textContent = algorithmTitles[algorithm];
-                        
-                        let resultHTML = `✓ Encrypted<br>File: ${encResult.originalName}<br>Size: ${encResult.originalSize} → ${encResult.encryptedSize} bytes<br>`;
-                        
-                        // Add algorithm-specific details
-                        if (encResult.iv) {
-                            resultHTML += `IV: ${encResult.iv.substring(0, 24)}...<br>`;
-                        }
-                        if (encResult.nonce) {
-                            resultHTML += `Nonce: ${encResult.nonce.substring(0, 24)}...<br>`;
-                        }
-                        if (encResult.tag) {
-                            resultHTML += `Tag: ${encResult.tag.substring(0, 24)}...<br>`;
-                        }
-                        if (encResult.encryptTime) {
-                            resultHTML += `Time: ${encResult.encryptTime}ms<br>`;
-                        }
-                        if (encResult.keygenTime) {
-                            resultHTML += `Keygen: ${encResult.keygenTime}ms<br>`;
-                        }
-                        if (encResult.key) {
-                            resultHTML += `Key: ${encResult.key.substring(0, 24)}...<br>`;
-                        }
-                        
-                        resultHTML += `<details><summary>Encrypted Data</summary><div style="max-height:100px;overflow-y:auto;font-size:10px;word-break:break-all;">${encResult.encrypted}</div></details>`;
-                        
-                        document.getElementById('crypto-result').innerHTML = resultHTML;
-                        document.getElementById('result-download').disabled = false;
-                        document.getElementById('result-download-binary').disabled = false;
+                        results.aes = encResult;
+                        document.getElementById('aes-result').innerHTML = 
+                            `✓ Encrypted<br>File: ${encResult.originalName}<br>Size: ${encResult.originalSize} → ${encResult.encryptedSize} bytes<br>` +
+                            `IV: ${encResult.iv.substring(0, 24)}...<br>Time: ${encResult.encryptTime}ms<br>` +
+                            `Tag: ${encResult.tag.substring(0, 24)}...<br>` +
+                            `<details><summary>Encrypted Data</summary><div style="max-height:100px;overflow-y:auto;font-size:10px;word-break:break-all;">${encResult.encrypted}</div></details>`;
+                        document.getElementById('aes-download').disabled = false;
+                        document.getElementById('aes-download-binary').disabled = false;
+                    }
+                } else {
+                    alert('Error: ' + simResult.error);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        async function runRSAWithSimulation() {
+            try {
+                const inputData = await getInputData();
+                currentInputData = inputData;  // Store for binary download
+                
+                const simResult = await callAPI('rsa-simulate', inputData);
+                
+                if (simResult.success) {
+                    displaySimulation('🗝️ RSA-OAEP Encryption Simulation', simResult.simulation);
+                    const encResult = await callAPI('rsa', inputData);
+                    
+                    if (encResult.success) {
+                        results.rsa = encResult;
+                        document.getElementById('rsa-result').innerHTML = 
+                            `✓ Encrypted<br>File: ${encResult.originalName}<br>Size: ${encResult.originalSize} → ${encResult.encryptedSize} bytes<br>` +
+                            `Keygen: ${encResult.keygenTime}ms<br>` +
+                            `<details><summary>Encrypted Data</summary><div style="max-height:100px;overflow-y:auto;font-size:10px;word-break:break-all;">${encResult.encrypted}</div></details>`;
+                        document.getElementById('rsa-download').disabled = false;
+                        document.getElementById('rsa-download-binary').disabled = false;
+                    }
+                } else {
+                    alert('Error: ' + simResult.error);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        async function runECDHWithSimulation() {
+            try {
+                const simResult = await callAPI('ecdh-simulate', {});
+                
+                if (simResult.success) {
+                    displaySimulation('🤝 ECDH Key Exchange Simulation', simResult.simulation);
+                    const result = await callAPI('ecdh', {});
+                    
+                    if (result.success) {
+                        results.ecdh = result;
+                        document.getElementById('ecdh-result').innerHTML = 
+                            `✓ Key Exchange<br>Agreement: ${result.keyAgreement}<br>` +
+                            `Key Length: ${result.sharedKeyLength} bytes<br>` +
+                            `<details><summary>Shared Key</summary><div style="max-height:100px;overflow-y:auto;font-size:10px;word-break:break-all;">${result.sharedKey}</div></details>`;
+                        document.getElementById('ecdh-download').disabled = false;
+                        document.getElementById('ecdh-download-binary').disabled = false;
+                    }
+                } else {
+                    alert('Error: ' + simResult.error);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        async function runHashWithSimulation() {
+            try {
+                const inputData = await getInputData();
+                currentInputData = inputData;  // Store for binary download
+                
+                const simResult = await callAPI('hash-simulate', inputData);
+                
+                if (simResult.success) {
+                    displaySimulation('🔢 SHA-256 Hashing Simulation', simResult.simulation);
+                    const result = await callAPI('hash', inputData);
+                    
+                    if (result.success) {
+                        results.hash = result;
+                        document.getElementById('hash-result').innerHTML = 
+                            `✓ Hash Generated<br>File: ${result.originalName}<br>Size: ${result.originalSize} bytes<br>` +
+                            `Time: ${result.hashTime}ms<br>` +
+                            `<details><summary>SHA-256 Hash</summary><div style="max-height:100px;overflow-y:auto;font-size:10px;word-break:break-all;">${result.hash}</div></details>`;
+                        document.getElementById('hash-download').disabled = false;
+                        document.getElementById('hash-download-binary').disabled = false;
                     }
                 } else {
                     alert('Error: ' + simResult.error);
@@ -512,13 +543,6 @@
         function displaySimulation(title, simulation) {
             currentSimulation = simulation;  // Store for animations
             currentSimulationTitle = title;
-            
-            // Validate simulation has steps
-            if (!simulation || !simulation.steps || !Array.isArray(simulation.steps)) {
-                console.error('Invalid simulation data:', simulation);
-                alert('Error: Invalid simulation data received from server');
-                return;
-            }
             
             document.getElementById('simulationTitle').textContent = title;
             const panel = document.getElementById('simulationPanel');
@@ -574,59 +598,106 @@
             document.getElementById('simulationPanel').classList.remove('active');
         }
 
-        function downloadResult() {
-            if (!currentResult || !currentAlgorithm) {
+        function downloadResult(technique) {
+            const result = results[technique];
+            if (!result) {
                 alert('No result to download');
                 return;
             }
 
             let content = '';
             const timestamp = new Date().toLocaleString();
-            const result = currentResult;
-            const algoTitle = algorithmTitles[currentAlgorithm];
 
-            content = `${algoTitle} Encryption Result\n`;
-            content += '='.repeat(algoTitle.length + 18) + '\n';
-            content += `Generated: ${timestamp}\n`;
-            content += `Original File: ${result.originalName}\n`;
-            content += `Original Size: ${result.originalSize} bytes\n`;
-            content += `Encrypted Size: ${result.encryptedSize} bytes\n`;
-            
-            if (result.encryptTime) content += `Encryption Time: ${result.encryptTime}ms\n`;
-            if (result.keygenTime) content += `Key Generation Time: ${result.keygenTime}ms\n`;
-            
-            content += '\n';
-            
-            if (result.iv) content += `IV (Initialization Vector):\n${result.iv}\n\n`;
-            if (result.nonce) content += `Nonce:\n${result.nonce}\n\n`;
-            if (result.tag) content += `Authentication Tag:\n${result.tag}\n\n`;
-            if (result.key) content += `Key:\n${result.key}\n\n`;
-            
-            content += `Encrypted Data:\n${result.encrypted}\n`;
+            if (technique === 'aes') {
+                content = `AES-GCM Encryption Result
+========================
+Generated: ${timestamp}
+Original File: ${result.originalName}
+Original Size: ${result.originalSize} bytes
+Encrypted Size: ${result.encryptedSize} bytes
+Encryption Time: ${result.encryptTime}ms
+
+IV (Initialization Vector):
+${result.iv}
+
+Authentication Tag:
+${result.tag}
+
+Encrypted Data:
+${result.encrypted}
+`;
+            } else if (technique === 'rsa') {
+                content = `RSA-OAEP Encryption Result
+==========================
+Generated: ${timestamp}
+Original File: ${result.originalName}
+Original Size: ${result.originalSize} bytes
+Encrypted Size: ${result.encryptedSize} bytes
+Key Generation Time: ${result.keygenTime}ms
+
+Encrypted Data:
+${result.encrypted}
+`;
+            } else if (technique === 'ecdh') {
+                content = `ECDH Key Exchange Result
+=========================
+Generated: ${timestamp}
+Key Agreement: ${result.keyAgreement}
+Shared Key Length: ${result.sharedKeyLength} bytes
+
+Shared Key:
+${result.sharedKey}
+`;
+            } else if (technique === 'hash') {
+                content = `SHA-256 Hash Result
+====================
+Generated: ${timestamp}
+Original File: ${result.originalName}
+Original Size: ${result.originalSize} bytes
+Hash Time: ${result.hashTime}ms
+
+SHA-256 Hash:
+${result.hash}
+`;
+            }
 
             const element = document.createElement('a');
             element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(content));
-            element.setAttribute('download', `${currentAlgorithm}_result_${Date.now()}.txt`);
+            element.setAttribute('download', `${technique}_result_${Date.now()}.txt`);
             element.style.display = 'none';
             document.body.appendChild(element);
             element.click();
             document.body.removeChild(element);
         }
         
-        async function downloadBinary() {
+        async function downloadBinary(technique) {
             try {
-                if (!currentInputData || !currentAlgorithm) {
-                    alert('No data available. Please run encryption first.');
-                    return;
+                let endpoint = '';
+                let inputData = null;
+                
+                if (technique === 'aes' || technique === 'rsa' || technique === 'hash') {
+                    if (!currentInputData) {
+                        alert('No input data available. Please run encryption first.');
+                        return;
+                    }
+                    inputData = currentInputData;
                 }
                 
-                let endpoint = `download-${currentAlgorithm}-binary`;
+                // Map technique to endpoint
+                const endpointMap = {
+                    'aes': 'download-aes-binary',
+                    'rsa': 'download-rsa-binary',
+                    'ecdh': 'download-ecdh-binary',
+                    'hash': 'download-hash-binary'
+                };
+                
+                endpoint = endpointMap[technique];
                 
                 // Make API call
                 const response = await fetch(`/api/${endpoint}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(currentInputData)
+                    body: JSON.stringify(inputData || {})
                 });
                 
                 if (!response.ok) {
@@ -638,7 +709,7 @@
                 
                 // Extract filename from Content-Disposition header or use default
                 const contentDisposition = response.headers.get('Content-Disposition');
-                let filename = `encrypted_${currentAlgorithm}_${Date.now()}.enc`;
+                let filename = `encrypted_${technique}_${Date.now()}.enc`;
                 
                 if (contentDisposition) {
                     const filenameMatch = contentDisposition.match(/filename="?(.+)"?/i);
@@ -713,26 +784,16 @@
             // Clear canvas
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // Determine animation based on algorithm type
-            if (title.includes('AES') || title.includes('DES') || title.includes('Blowfish') || title.includes('ChaCha20')) {
+            // Determine animation based on title and step
+            if (title.includes('AES')) {
                 animateAESStep(stepNumber, stepName, stepData, ctx, canvas, desc);
-            } else if (title.includes('RSA') || title.includes('ECC')) {
+            } else if (title.includes('RSA')) {
                 animateRSAStep(stepNumber, stepName, stepData, ctx, canvas, desc);
-            } else if (title.includes('Playfair') || title.includes('Hill') || title.includes('Vigenère') || 
-                       title.includes('Rail Fence') || title.includes('Columnar')) {
-                // Classical ciphers use simplified visualization
-                animateClassicalCipher(stepNumber, stepName, stepData, ctx, canvas, desc);
             } else if (title.includes('ECDH')) {
                 animateECDHStep(stepNumber, stepName, stepData, ctx, canvas, desc);
             } else if (title.includes('Hash')) {
                 animateHashStep(stepNumber, stepName, stepData, ctx, canvas, desc);
             }
-        }
-        
-        // Generic Classical Cipher Animation
-        function animateClassicalCipher(stepNumber, stepName, stepData, ctx, canvas, desc) {
-            // Simple text transformation visualization for classical ciphers
-            animateTextToHex(stepData, ctx, canvas, desc);
         }
         
         // AES Animation Functions
