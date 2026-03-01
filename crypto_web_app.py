@@ -699,6 +699,140 @@ def download_hash_binary():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+@app.route('/api/decrypt-aes', methods=['POST'])
+def decrypt_aes():
+    """Decrypt AES-GCM encrypted data"""
+    try:
+        data = request.json
+        
+        # Extract decryption parameters
+        if 'encryptedFile' in data:
+            # Decrypt from uploaded encrypted file
+            encrypted_file = json.loads(data['encryptedFile'])
+            iv = bytes.fromhex(encrypted_file['iv'])
+            tag = bytes.fromhex(encrypted_file['tag'])
+            key = bytes.fromhex(encrypted_file['key'])
+            ciphertext = base64.b64decode(encrypted_file['ciphertext'])
+            original_name = encrypted_file.get('original_name', 'decrypted_file')
+        else:
+            # Manual decryption with provided parameters
+            iv = bytes.fromhex(data['iv'])
+            tag = bytes.fromhex(data['tag'])
+            key = bytes.fromhex(data['key'])
+            ciphertext = base64.b64decode(data['ciphertext'])
+            original_name = data.get('originalName', 'decrypted_file')
+        
+        # Decrypt
+        cipher = Cipher(algorithms.AES(key), modes.GCM(iv, tag), backend=default_backend())
+        decryptor = cipher.decryptor()
+        
+        start_time = time.time()
+        plaintext = decryptor.update(ciphertext) + decryptor.finalize()
+        decrypt_time = (time.time() - start_time) * 1000
+        
+        # Try to decode as text, otherwise return as base64
+        try:
+            plaintext_text = plaintext.decode('utf-8')
+            is_text = True
+        except UnicodeDecodeError:
+            plaintext_text = base64.b64encode(plaintext).decode('utf-8')
+            is_text = False
+        
+        return jsonify({
+            'success': True,
+            'plaintext': plaintext_text,
+            'isText': is_text,
+            'size': len(plaintext),
+            'decryptTime': f"{decrypt_time:.2f}",
+            'originalName': original_name
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/decrypt-rsa', methods=['POST'])
+def decrypt_rsa():
+    """Decrypt RSA-OAEP encrypted data"""
+    try:
+        data = request.json
+        
+        # Extract decryption parameters
+        if 'encryptedFile' in data:
+            # Decrypt from uploaded encrypted file
+            encrypted_file = json.loads(data['encryptedFile'])
+            ciphertext = base64.b64decode(encrypted_file['ciphertext'])
+            private_key_pem = encrypted_file['private_key'].encode('utf-8')
+            original_name = encrypted_file.get('original_name', 'decrypted_file')
+        else:
+            # Manual decryption with provided parameters
+            ciphertext = base64.b64decode(data['ciphertext'])
+            private_key_pem = data['privateKey'].encode('utf-8')
+            original_name = data.get('originalName', 'decrypted_file')
+        
+        # Load private key
+        private_key = serialization.load_pem_private_key(
+            private_key_pem,
+            password=None,
+            backend=default_backend()
+        )
+        
+        # Decrypt
+        start_time = time.time()
+        plaintext = private_key.decrypt(ciphertext, padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None
+        ))
+        decrypt_time = (time.time() - start_time) * 1000
+        
+        # Try to decode as text, otherwise return as base64
+        try:
+            plaintext_text = plaintext.decode('utf-8')
+            is_text = True
+        except UnicodeDecodeError:
+            plaintext_text = base64.b64encode(plaintext).decode('utf-8')
+            is_text = False
+        
+        return jsonify({
+            'success': True,
+            'plaintext': plaintext_text,
+            'isText': is_text,
+            'size': len(plaintext),
+            'decryptTime': f"{decrypt_time:.2f}",
+            'originalName': original_name
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/download-decrypted', methods=['POST'])
+def download_decrypted():
+    """Download decrypted file"""
+    try:
+        data = request.json
+        plaintext = data['plaintext']
+        is_text = data['isText']
+        original_name = data.get('originalName', 'decrypted_file.txt')
+        
+        # Convert back to bytes
+        if is_text:
+            plaintext_bytes = plaintext.encode('utf-8')
+        else:
+            plaintext_bytes = base64.b64decode(plaintext)
+        
+        # Determine filename
+        if original_name.endswith('.enc'):
+            filename = original_name[:-4]  # Remove .enc extension
+        else:
+            filename = f"decrypted_{original_name}"
+        
+        return send_file(
+            io.BytesIO(plaintext_bytes),
+            mimetype='application/octet-stream',
+            as_attachment=True,
+            download_name=filename
+        )
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
     print("🔐 Crypto Tool Server Starting...")

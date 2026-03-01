@@ -133,6 +133,44 @@
             </div>
         </div>
         
+        <!-- Decryption Section -->
+        <div class="input-section">
+            <h2 style="text-align: center; margin-bottom: 20px;">🔓 Decryption</h2>
+            
+            <div style="display: flex; gap: 10px; margin-bottom: 20px; align-items: center;">
+                <label style="margin: 0;">
+                    <input type="radio" name="decryptMode" value="aes" checked onchange="toggleDecryptMode()"> AES-GCM
+                </label>
+                <label style="margin: 0;">
+                    <input type="radio" name="decryptMode" value="rsa" onchange="toggleDecryptMode()"> RSA-OAEP
+                </label>
+            </div>
+            
+            <div class="input-group">
+                <label for="encryptedFileInput">Upload Encrypted File (.enc or .key):</label>
+                <input type="file" id="encryptedFileInput" onchange="handleEncryptedFileSelect()" 
+                       accept=".enc,.key,application/octet-stream"
+                       style="width: 100%; padding: 15px; border: 2px dashed rgba(255,255,255,0.3); 
+                              border-radius: 10px; background: rgba(255,255,255,0.05); color: white; cursor: pointer;">
+                <div id="encryptedFileInfo" style="margin-top: 10px; padding: 10px; background: rgba(0,0,0,0.2); 
+                                          border-radius: 5px; display: none;">
+                    <div><strong>File:</strong> <span id="encryptedFileName"></span></div>
+                    <div><strong>Size:</strong> <span id="encryptedFileSize"></span></div>
+                    <div><strong>Algorithm:</strong> <span id="encryptedAlgorithm"></span></div>
+                </div>
+            </div>
+            
+            <div style="text-align: center;">
+                <button class="btn" onclick="decryptData()">🔓 Decrypt</button>
+            </div>
+            
+            <div style="margin-top: 20px;">
+                <h3>Decryption Result:</h3>
+                <div class="result" id="decryption-result">Upload an encrypted file and click Decrypt</div>
+                <button class="download-btn" id="decrypt-download" onclick="downloadDecrypted()" disabled style="width: 100%; margin-top: 10px;">📥 Download Decrypted File</button>
+            </div>
+        </div>
+        
         <div class="simulation-panel" id="simulationPanel">
             <h2 class="simulation-title" id="simulationTitle">🔬 Simulation</h2>
             <div class="progress-bar">
@@ -177,6 +215,8 @@
 
     <script>
         let selectedFile = null;
+        let selectedEncryptedFile = null;
+        let decryptedData = null;
         let results = {
             aes: null,
             rsa: null,
@@ -192,6 +232,12 @@
             document.getElementById('textInputGroup').style.display = mode === 'text' ? 'block' : 'none';
             document.getElementById('fileInputGroup').style.display = mode === 'file' ? 'block' : 'none';
             if (mode === 'text') selectedFile = null;
+        }
+        
+        function toggleDecryptMode() {
+            // Currently just switches between AES and RSA - functionality is the same
+            const mode = document.querySelector('input[name="decryptMode"]:checked').value;
+            // Could add mode-specific UI changes here if needed
         }
 
         function handleFileSelect() {
@@ -212,6 +258,128 @@
             if (bytes < 1024) return bytes + ' bytes';
             if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
             return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+        }
+        
+        function handleEncryptedFileSelect() {
+            const file = document.getElementById('encryptedFileInput').files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const content = e.target.result;
+                        const encryptedData = JSON.parse(content);
+                        
+                        selectedEncryptedFile = {
+                            file: file,
+                            data: encryptedData
+                        };
+                        
+                        document.getElementById('encryptedFileName').textContent = file.name;
+                        document.getElementById('encryptedFileSize').textContent = formatFileSize(file.size);
+                        document.getElementById('encryptedAlgorithm').textContent = encryptedData.algorithm || 'Unknown';
+                        document.getElementById('encryptedFileInfo').style.display = 'block';
+                        
+                        // Auto-select the correct decryption mode
+                        if (encryptedData.algorithm && encryptedData.algorithm.includes('AES')) {
+                            document.querySelector('input[name="decryptMode"][value="aes"]').checked = true;
+                        } else if (encryptedData.algorithm && encryptedData.algorithm.includes('RSA')) {
+                            document.querySelector('input[name="decryptMode"][value="rsa"]').checked = true;
+                        }
+                    } catch (error) {
+                        alert('Error reading encrypted file: ' + error.message);
+                        selectedEncryptedFile = null;
+                        document.getElementById('encryptedFileInfo').style.display = 'none';
+                    }
+                };
+                reader.onerror = () => {
+                    alert('Failed to read encrypted file');
+                    selectedEncryptedFile = null;
+                    document.getElementById('encryptedFileInfo').style.display = 'none';
+                };
+                reader.readAsText(file);
+            } else {
+                selectedEncryptedFile = null;
+                document.getElementById('encryptedFileInfo').style.display = 'none';
+            }
+        }
+        
+        async function decryptData() {
+            try {
+                if (!selectedEncryptedFile) {
+                    alert('Please select an encrypted file first');
+                    return;
+                }
+                
+                const mode = document.querySelector('input[name="decryptMode"]:checked').value;
+                const encryptedFile = JSON.stringify(selectedEncryptedFile.data);
+                
+                let endpoint = mode === 'aes' ? 'decrypt-aes' : 'decrypt-rsa';
+                
+                const result = await callAPI(endpoint, { encryptedFile: encryptedFile });
+                
+                if (result.success) {
+                    decryptedData = result;
+                    
+                    let displayText = result.plaintext;
+                    if (!result.isText) {
+                        displayText = displayText.substring(0, 200) + '... (binary data)';
+                    } else if (displayText.length > 500) {
+                        displayText = displayText.substring(0, 500) + '...';
+                    }
+                    
+                    document.getElementById('decryption-result').innerHTML = 
+                        `✓ Decrypted Successfully<br>` +
+                        `Original Name: ${result.originalName}<br>` +
+                        `Size: ${result.size} bytes<br>` +
+                        `Decryption Time: ${result.decryptTime}ms<br>` +
+                        `Type: ${result.isText ? 'Text' : 'Binary'}<br><br>` +
+                        `<details open><summary>Decrypted Content</summary>` +
+                        `<div style="max-height:200px;overflow-y:auto;font-size:12px;word-break:break-all;white-space:pre-wrap;">${displayText}</div></details>`;
+                    
+                    document.getElementById('decrypt-download').disabled = false;
+                } else {
+                    document.getElementById('decryption-result').innerHTML = `❌ Decryption Failed<br>Error: ${result.error}`;
+                    document.getElementById('decrypt-download').disabled = true;
+                    decryptedData = null;
+                }
+            } catch (error) {
+                alert('Error during decryption: ' + error.message);
+                document.getElementById('decryption-result').innerHTML = `❌ Error: ${error.message}`;
+                document.getElementById('decrypt-download').disabled = true;
+                decryptedData = null;
+            }
+        }
+        
+        async function downloadDecrypted() {
+            if (!decryptedData) {
+                alert('No decrypted data to download');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/download-decrypted', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(decryptedData)
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to download decrypted file');
+                }
+                
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = 'decrypted_' + (decryptedData.originalName || 'file.txt');
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            } catch (error) {
+                alert('Error downloading decrypted file: ' + error.message);
+            }
         }
 
         async function callAPI(endpoint, data) {
