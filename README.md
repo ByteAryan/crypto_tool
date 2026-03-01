@@ -1,34 +1,101 @@
 # Crypto Tool - Interactive Cryptographic Algorithm Simulator
 
-A comprehensive educational cryptographic tool built with Python that provides interactive visualizations and step-by-step simulations of popular encryption algorithms. Perfect for learning, teaching, and understanding how cryptographic algorithms work under the hood.
+A comprehensive educational cryptographic tool built with Python that provides interactive visualizations and step-by-step simulations of popular encryption algorithms. **Version 2.0 now includes 10 new algorithms!**
+
+**✨ Version 2.0 Update:** Added DES, 3DES, Blowfish, ChaCha20, Playfair, Hill, Vigenère, Rail Fence, Columnar Transposition, and ECC! All with complete text/file encryption and simulation steps. See [CHANGELOG_v2.md](CHANGELOG_v2.md) for details.
+
+## 🚀 Quick Start
+
+```bash
+# Clone the repository
+cd crypto_tool
+
+# Install dependencies
+pip install cryptography flask numpy
+# OR use requirements
+pip install -r requirements.txt
+
+# Run tests to verify everything works
+python test_crypto.py
+python test_new_algorithms.py
+
+# Start the web application
+python crypto_web_app.py
+# Then open http://localhost:5000 in your browser
+
+# OR run the command-line interface
+python main.py
+```
 
 ## 🎯 Features
 
 ### 🔐 Supported Cryptographic Algorithms
 
+#### Modern Symmetric Ciphers
 1. **AES-256-GCM (Advanced Encryption Standard)**
    - Symmetric encryption with Galois/Counter Mode
    - 256-bit key size for maximum security
    - Built-in authentication tag for data integrity
    - Step-by-step visualization of encryption process
 
-2. **RSA-OAEP (RSA with OAEP Padding)**
+2. **DES (Data Encryption Standard)** 🆕
+   - Classic 56-bit symmetric cipher
+   - Educational implementation with step-by-step simulation
+   - Shows Feistel network structure
+
+3. **3DES (Triple DES)** 🆕
+   - Enhanced DES with triple encryption
+   - 168-bit effective key strength
+   - Demonstrates EDE (Encrypt-Decrypt-Encrypt) mode
+
+4. **Blowfish** 🆕
+   - Fast symmetric block cipher
+   - Variable key length (4-56 bytes)
+   - Shows P-array and S-box generation
+
+5. **ChaCha20** 🆕
+   - Modern stream cipher
+   - 256-bit key, very fast
+   - No padding required
+
+#### Asymmetric Ciphers
+6. **RSA-OAEP (RSA with OAEP Padding)**
    - Asymmetric encryption with 2048-bit keys
    - Optimal Asymmetric Encryption Padding (OAEP)
    - Public/private key pair generation
    - Detailed visualization of key generation and encryption
 
-3. **ECDH (Elliptic Curve Diffie-Hellman)**
-   - Key exchange using SECP256R1 (P-256) curve
-   - Secure shared secret generation
-   - Demonstrates key agreement between two parties
-   - AES key derivation from shared secret
+7. **ECC (Elliptic Curve Cryptography)** 🆕
+   - Uses ECIES (Elliptic Curve Integrated Encryption Scheme)
+   - 256-bit elliptic curve (secp256r1)
+   - Perfect forward secrecy
+   - Combines ECDH + KDF + AES-GCM
 
-4. **SHA-256 (Secure Hash Algorithm)**
-   - Cryptographic hashing with 256-bit output
-   - Avalanche effect demonstration
-   - Block-by-block processing visualization
-   - Performance benchmarking
+#### Classical Ciphers (Educational)
+8. **Playfair Cipher** 🆕
+   - 5×5 matrix-based substitution
+   - Digraph encryption
+   - Historical cipher with educational value
+
+9. **Hill Cipher** 🆕
+   - Matrix-based encryption using linear algebra
+   - 2×2 matrix multiplication (mod 26)
+   - Demonstrates mathematical cryptography
+
+10. **Vigenère Cipher** 🆕
+    - Polyalphabetic substitution cipher
+    - Variable-length keyword
+    - Classic cryptography algorithm
+
+11. **Double Rail Fence Cipher** 🆕
+    - Transposition cipher with zigzag pattern
+    - Two-pass encryption
+    - Classic steganographic technique
+
+12. **Double Columnar Transposition** 🆕
+    - Two-pass columnar transposition
+    - Uses two keywords
+    - World War era cipher
 
 ### 🎨 Three Interface Modes
 
@@ -39,12 +106,15 @@ A comprehensive educational cryptographic tool built with Python that provides i
 - Binary download capabilities
 - Decryption interface for encrypted files
 - Supports both text and file inputs
+- 12 different encryption algorithms available
 - Animated educational visualizations:
   - Text-to-hex conversion
-  - Block division
-  - XOR operations
-  - Elliptic curve visualization
-  - Hash compression rounds
+  - Block division and XOR operations
+  - Feistel network structure (DES/3DES)
+  - S-box and P-array generation (Blowfish)
+  - Matrix operations (Hill cipher)
+  - Transposition patterns (Rail Fence, Columnar)
+  - Elliptic curve cryptography (ECC)
   - And much more!
 
 #### 2. **GUI Simulator** (Tkinter)
@@ -81,8 +151,11 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 ```
 
 3. **Install dependencies:**
-```bash
-pip install cryptography flask
+```bashpip install -r requirements.txt
+```
+
+Or install individually:
+```bashpip install cryptography flask
 ```
 
 ## 📖 Usage
@@ -98,8 +171,8 @@ python crypto_web_app.py
 Navigate to `http://localhost:5000`
 
 3. **Features available:**
-   - Choose between AES, RSA, ECDH, or SHA-256
-   - Input text or upload files
+   - Choose from 12 algorithms: AES, RSA, DES, 3DES, Blowfish, ChaCha20, ECC, Playfair, Hill, Vigenère, Rail Fence, Columnar
+   - Input text or upload files for encryption
    - Click "Encrypt & Run Simulation" to see step-by-step process
    - Click on individual steps to see animated visualizations
    - Download encrypted files or text results
@@ -135,41 +208,46 @@ python main.py
 
 The web application exposes RESTful API endpoints for programmatic access:
 
-### Simulation Endpoints
-- `POST /api/aes-simulate` - Run AES-GCM simulation
-- `POST /api/rsa-simulate` - Run RSA-OAEP simulation
-- `POST /api/ecdh-simulate` - Run ECDH key exchange simulation
-- `POST /api/hash-simulate` - Run SHA-256 hashing simulation
+### Modern Symmetric Cipher Endpoints
+- `POST /api/aes` & `/api/aes-simulate` - AES-256-GCM encryption & simulation
+- `POST /api/des` & `/api/des-simulate` 🆕 - DES encryption & simulation
+- `POST /api/3des` & `/api/3des-simulate` 🆕 - Triple DES encryption & simulation
+- `POST /api/blowfish` & `/api/blowfish-simulate` 🆕 - Blowfish encryption & simulation
+- `POST /api/chacha20` & `/api/chacha20-simulate` 🆕 - ChaCha20 encryption & simulation
 
-### Encryption/Decryption Endpoints
-- `POST /api/aes` - Encrypt data with AES-GCM
-- `POST /api/rsa` - Encrypt data with RSA-OAEP
-- `POST /api/ecdh` - Perform ECDH key exchange
-- `POST /api/hash` - Generate SHA-256 hash
+### Asymmetric Cipher Endpoints
+- `POST /api/rsa` & `/api/rsa-simulate` - RSA-OAEP encryption & simulation
+- `POST /api/ecc` & `/api/ecc-simulate` 🆕 - ECC/ECIES encryption & simulation
 
-### Download Endpoints
-- `POST /api/download-aes-binary` - Download encrypted AES binary
-- `POST /api/download-rsa-binary` - Download encrypted RSA binary
-- `POST /api/download-ecdh-binary` - Download ECDH key material
-- `POST /api/download-hash-binary` - Download hash output
+### Classical Cipher Endpoints 🆕
+- `POST /api/playfair` & `/api/playfair-simulate` - Playfair cipher encryption & simulation
+- `POST /api/hill` & `/api/hill-simulate` - Hill cipher encryption & simulation
+- `POST /api/vigenere` & `/api/vigenere-simulate` - Vigenère cipher encryption & simulation
+- `POST /api/railfence` & `/api/railfence-simulate` - Double Rail Fence encryption & simulation
+- `POST /api/columnar` & `/api/columnar-simulate` - Double Columnar Transposition encryption & simulation
 
-### Decryption Endpoints
-- `POST /api/decrypt-aes` - Decrypt AES-GCM encrypted data
-- `POST /api/decrypt-rsa` - Decrypt RSA-OAEP encrypted data
-- `POST /api/download-decrypted` - Download decrypted file
+### Utility Endpoints
+- `POST /api/decrypt` - Universal decryption endpoint (supports all algorithms)
 
 ## 📁 Project Structure
 
 ```
 crypto_tool/
 ├── main.py                    # Main entry point for CLI/GUI
-├── crypto_web_app.py          # Flask web application
+├── crypto_web_app.py          # Flask web application (v2.0)
 ├── crypto_frontend.html       # Web UI with animations
 ├── config.py                  # Configuration settings
+├── setup.py                   # Package installation
 ├── README.md                  # This file
+├── CHANGELOG_v2.md            # Version 2.0 changelog 🆕
+├── test_crypto.py             # Original algorithm tests
+├── test_new_algorithms.py     # New algorithm tests 🆕
 ├── algorithms/
 │   ├── __init__.py
-│   └── aes.py                 # AES-CBC implementation
+│   ├── aes.py                 # AES-CBC/GCM implementation
+│   ├── symmetric.py           # DES, 3DES, Blowfish, ChaCha20 🆕
+│   ├── classical.py           # Classical ciphers 🆕
+│   └── ecc.py                 # ECC/ECIES implementation 🆕
 ├── simulation/
 │   ├── __init__.py
 │   ├── simulator.py           # Command-line simulator
@@ -177,7 +255,8 @@ crypto_tool/
 ├── utils/
 │   ├── __init__.py
 │   ├── key_generator.py       # Cryptographic key generation
-│   └── file_handler.py        # File I/O utilities
+│   ├── file_handler.py        # File I/O utilities
+│   └── file_crypto.py         # File encryption utilities 🆕
 └── identification/
     └── __init__.py            # Future: Algorithm identification
 ```
@@ -192,13 +271,28 @@ This tool is designed for:
 
 ### What You'll Learn
 
-- How AES block cipher mode works
+**Modern Cryptography:**
+- How AES block cipher modes work (CBC, GCM)
 - RSA key generation and OAEP padding
-- Elliptic curve cryptography principles
-- Hash function properties and avalanche effect
-- Difference between symmetric and asymmetric encryption
+- DES and 3DES Feistel network structure
+- Blowfish S-box and P-array generation
+- ChaCha20 stream cipher operations
+- Elliptic curve cryptography (ECC/ECIES)
 - Authenticated encryption with GCM mode
-- Key exchange protocols
+- Difference between symmetric and asymmetric encryption
+
+**Classical Cryptography:**
+- Playfair cipher digraph substitution
+- Hill cipher matrix operations
+- Vigenère polyalphabetic substitution
+- Rail Fence transposition patterns
+- Columnar transposition techniques
+
+**Security Concepts:**
+- Padding schemes (PKCS7, OAEP)
+- Key derivation functions (KDF)
+- Authentication tags and integrity
+- Perfect forward secrecy (ECC)
 
 ## 🔒 Security Notes
 
@@ -218,8 +312,9 @@ For production use, always:
 ## 🛠️ Technologies Used
 
 - **Python 3.8+** - Core programming language
-- **Flask** - Web framework
-- **cryptography** - Cryptographic primitives library
+- **Flask** - Web framework for REST API
+- **cryptography** - Industry-standard cryptographic primitives
+- **NumPy** - Mathematical operations for Hill cipher 🆕
 - **Tkinter** - GUI framework (built-in)
 - **HTML/CSS/JavaScript** - Frontend with Canvas animations
 

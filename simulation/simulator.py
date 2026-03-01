@@ -1,6 +1,6 @@
-from crypto_tool.utils import key_generator
-from crypto_tool import config
-from crypto_tool.algorithms import aes
+from utils import key_generator
+import config
+from algorithms import aes
 
 def run_simulation(plaintext, key, iv):
     print("=== AES Encryption/Decryption Simulation ===\n")

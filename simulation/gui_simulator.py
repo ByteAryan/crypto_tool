@@ -1,7 +1,7 @@
 import tkinter as tk
-from crypto_tool.utils import key_generator
-from crypto_tool.algorithms import aes
-from crypto_tool import config
+from utils import key_generator
+from algorithms import aes
+import config
 import base64
 import time
 
