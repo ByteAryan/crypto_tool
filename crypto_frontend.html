@@ -716,23 +716,136 @@
             // Determine animation based on algorithm type
             if (title.includes('AES') || title.includes('DES') || title.includes('Blowfish') || title.includes('ChaCha20')) {
                 animateAESStep(stepNumber, stepName, stepData, ctx, canvas, desc);
-            } else if (title.includes('RSA') || title.includes('ECC')) {
+            } else if (title.includes('RSA')) {
                 animateRSAStep(stepNumber, stepName, stepData, ctx, canvas, desc);
-            } else if (title.includes('Playfair') || title.includes('Hill') || title.includes('Vigenère') || 
-                       title.includes('Rail Fence') || title.includes('Columnar')) {
-                // Classical ciphers use simplified visualization
-                animateClassicalCipher(stepNumber, stepName, stepData, ctx, canvas, desc);
+            } else if (title.includes('ECC') && !title.includes('ECDH')) {
+                // ECC (ECIES) encryption has different steps than RSA
+                animateECCStep(stepNumber, stepName, stepData, ctx, canvas, desc);
             } else if (title.includes('ECDH')) {
                 animateECDHStep(stepNumber, stepName, stepData, ctx, canvas, desc);
+            } else if (title.includes('Playfair')) {
+                animatePlayfairStep(stepNumber, stepName, stepData, ctx, canvas, desc);
+            } else if (title.includes('Hill')) {
+                animateHillStep(stepNumber, stepName, stepData, ctx, canvas, desc);
+            } else if (title.includes('Vigenère')) {
+                animateVigenereStep(stepNumber, stepName, stepData, ctx, canvas, desc);
+            } else if (title.includes('Rail Fence')) {
+                animateRailFenceStep(stepNumber, stepName, stepData, ctx, canvas, desc);
+            } else if (title.includes('Columnar')) {
+                animateColumnarStep(stepNumber, stepName, stepData, ctx, canvas, desc);
             } else if (title.includes('Hash')) {
                 animateHashStep(stepNumber, stepName, stepData, ctx, canvas, desc);
             }
         }
         
-        // Generic Classical Cipher Animation
-        function animateClassicalCipher(stepNumber, stepName, stepData, ctx, canvas, desc) {
-            // Simple text transformation visualization for classical ciphers
-            animateTextToHex(stepData, ctx, canvas, desc);
+        // ECC Animation Functions (ECIES)
+        function animateECCStep(stepNumber, stepName, stepData, ctx, canvas, desc) {
+            switch(stepNumber) {
+                case 1: // Input Preparation
+                    animateTextToHex(stepData, ctx, canvas, desc);
+                    break;
+                case 2: // ECC Key Pair Generation
+                    animateEllipticCurve(stepData, ctx, canvas, desc);
+                    break;
+                case 3: // ECIES Protocol
+                    animateECIESProtocol(stepData, ctx, canvas, desc);
+                    break;
+                case 4: // Ephemeral Key Generation
+                    animateCurvePoint(stepData, ctx, canvas, desc, stepNumber);
+                    break;
+                case 5: // Shared Secret Derivation
+                    animateKeyMatch(stepData, ctx, canvas, desc);
+                    break;
+                case 6: // AES-GCM Encryption
+                    animateXOROperation(stepData, ctx, canvas, desc);
+                    break;
+                case 7: // Output Components
+                    animateAssembly(stepData, ctx, canvas, desc);
+                    break;
+                default:
+                    animateGeneric(stepData, ctx, canvas, desc, stepName);
+            }
+        }
+        
+        // Playfair Animation Functions
+        function animatePlayfairStep(stepNumber, stepName, stepData, ctx, canvas, desc) {
+            switch(stepNumber) {
+                case 1: // Input Preparation
+                    animateTextToHex(stepData, ctx, canvas, desc);
+                    break;
+                case 2: // Key Matrix Generation
+                    animatePlayfairMatrix(stepData, ctx, canvas, desc);
+                    break;
+                case 3: // Digraph Formation
+                    animateDigraphFormation(stepData, ctx, canvas, desc);
+                    break;
+                default:
+                    animateGeneric(stepData, ctx, canvas, desc, stepName);
+            }
+        }
+        
+        // Hill Cipher Animation Functions
+        function animateHillStep(stepNumber, stepName, stepData, ctx, canvas, desc) {
+            switch(stepNumber) {
+                case 1: // Input Preparation
+                    animateTextToHex(stepData, ctx, canvas, desc);
+                    break;
+                case 2: // Key Matrix Setup
+                    animateHillMatrix(stepData, ctx, canvas, desc);
+                    break;
+                case 3: // Matrix Multiplication
+                    animateMatrixMultiply(stepData, ctx, canvas, desc);
+                    break;
+                default:
+                    animateGeneric(stepData, ctx, canvas, desc, stepName);
+            }
+        }
+        
+        // Vigenère Animation Functions
+        function animateVigenereStep(stepNumber, stepName, stepData, ctx, canvas, desc) {
+            switch(stepNumber) {
+                case 1: // Input Preparation
+                    animateTextToHex(stepData, ctx, canvas, desc);
+                    break;
+                case 2: // Key Expansion
+                    animateVigenereKey(stepData, ctx, canvas, desc);
+                    break;
+                case 3: // Character Shifting
+                    animateVigenereShift(stepData, ctx, canvas, desc);
+                    break;
+                default:
+                    animateGeneric(stepData, ctx, canvas, desc, stepName);
+            }
+        }
+        
+        // Rail Fence Animation Functions
+        function animateRailFenceStep(stepNumber, stepName, stepData, ctx, canvas, desc) {
+            switch(stepNumber) {
+                case 1: // Input Preparation
+                    animateTextToHex(stepData, ctx, canvas, desc);
+                    break;
+                case 2: // First Rail Fence
+                case 3: // Second Rail Fence
+                    animateRailPattern(stepData, ctx, canvas, desc, stepNumber);
+                    break;
+                default:
+                    animateGeneric(stepData, ctx, canvas, desc, stepName);
+            }
+        }
+        
+        // Columnar Transposition Animation Functions
+        function animateColumnarStep(stepNumber, stepName, stepData, ctx, canvas, desc) {
+            switch(stepNumber) {
+                case 1: // Input Preparation
+                    animateTextToHex(stepData, ctx, canvas, desc);
+                    break;
+                case 2: // First Columnar Transposition
+                case 3: // Second Columnar Transposition
+                    animateColumnarGrid(stepData, ctx, canvas, desc, stepNumber);
+                    break;
+                default:
+                    animateGeneric(stepData, ctx, canvas, desc, stepName);
+            }
         }
         
         // AES Animation Functions
@@ -1900,6 +2013,359 @@
                         ctx.font = '12px sans-serif';
                         ctx.fillText(`${keyAgreement} | ${sharedKeyLength} bytes`, centerX, y + 110);
                     }
+                }
+                
+                ctx.textAlign = 'left';
+                frame++;
+                if (frame < 150) requestAnimationFrame(animate);
+            };
+            animate();
+        }
+        
+        // ECIES Protocol Visualization
+        function animateECIESProtocol(stepData, ctx, canvas, desc) {
+            desc.textContent = "ECIES combines ECDH, KDF, and AES-GCM for secure encryption.";
+            let frame = 0;
+            
+            const animate = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 18px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('ECIES Protocol Components', canvas.width / 2, 30);
+                
+                const components = ['ECDH', 'KDF', 'AES-GCM'];
+                const colors = ['#667eea', '#764ba2', '#44a08d'];
+                const progress = Math.min(1, frame / 80);
+                
+                for (let i = 0; i < components.length; i++) {
+                    const x = canvas.width / 4 + (i * canvas.width / 4);
+                    const y = canvas.height / 2;
+                    const componentProgress = Math.max(0, Math.min(1, (progress - i * 0.33) / 0.33));
+                    
+                    if (componentProgress > 0) {
+                        ctx.globalAlpha = componentProgress;
+                        ctx.fillStyle = colors[i];
+                        const size = 80 * componentProgress;
+                        ctx.beginPath();
+                        ctx.arc(x, y, size / 2, 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = 'bold 14px sans-serif';
+                        ctx.fillText(components[i], x, y + 5);
+                        
+                        // Draw arrow to next component
+                        if (i < components.length - 1 && componentProgress > 0.8) {
+                            ctx.strokeStyle = '#4ecdc4';
+                            ctx.lineWidth = 3;
+                            ctx.beginPath();
+                            ctx.moveTo(x + 50, y);
+                            ctx.lineTo(x + canvas.width / 4 - 50, y);
+                            ctx.stroke();
+                            
+                            ctx.beginPath();
+                            ctx.moveTo(x + canvas.width / 4 - 50, y);
+                            ctx.lineTo(x + canvas.width / 4 - 60, y - 5);
+                            ctx.lineTo(x + canvas.width / 4 - 60, y + 5);
+                            ctx.closePath();
+                            ctx.fill();
+                        }
+                    }
+                }
+                
+                ctx.globalAlpha = 1;
+                ctx.textAlign = 'left';
+                frame++;
+                if (frame < 150) requestAnimationFrame(animate);
+            };
+            animate();
+        }
+        
+        // Playfair Matrix Visualization
+        function animatePlayfairMatrix(stepData, ctx, canvas, desc) {
+            desc.textContent = "Creating a 5x5 matrix from the key, removing duplicate letters.";
+            let frame = 0;
+            
+            const animate = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 18px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Playfair Key Matrix (5×5)', canvas.width / 2, 40);
+                
+                // Draw 5x5 grid
+                const gridSize = 5;
+                const cellSize = 50;
+                const startX = (canvas.width - gridSize * cellSize) / 2;
+                const startY = 80;
+                
+                const progress = Math.min(25, Math.floor(frame / 4));
+                
+                for (let i = 0; i < Math.min(progress, 25); i++) {
+                    const row = Math.floor(i / gridSize);
+                    const col = i % gridSize;
+                    const x = startX + col * cellSize;
+                    const y = startY + row * cellSize;
+                    
+                    ctx.fillStyle = '#667eea';
+                    ctx.fillRect(x, y, cellSize - 2, cellSize - 2);
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(x, y, cellSize - 2, cellSize - 2);
+                    
+                    // Show a letter (placeholder)
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 20px monospace';
+                    const letter = String.fromCharCode(65 + i); // A-Y
+                    ctx.fillText(letter, x + cellSize / 2, y + cellSize / 2 + 8);
+                }
+                
+                ctx.textAlign = 'left';
+                frame++;
+                if (frame < 150) requestAnimationFrame(animate);
+            };
+            animate();
+        }
+        
+        // Digraph Formation Visualization
+        function animateDigraphFormation(stepData, ctx, canvas, desc) {
+            desc.textContent = "Text is split into pairs of letters (digraphs) for encryption.";
+            animateGeneric(stepData, ctx, canvas, desc, 'Digraph Formation');
+        }
+        
+        // Hill Matrix Visualization
+        function animateHillMatrix(stepData, ctx, canvas, desc) {
+            desc.textContent = "Hill cipher uses matrix multiplication for encryption.";
+            let frame = 0;
+            
+            const animate = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 18px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Hill Cipher Key Matrix', canvas.width / 2, 40);
+                
+                // Draw matrix
+                const matrixSize = 3;
+                const cellSize = 60;
+                const startX = (canvas.width - matrixSize * cellSize) / 2;
+                const startY = 100;
+                const progress = Math.min(1, frame / 60);
+                
+                ctx.globalAlpha = progress;
+                for (let row = 0; row < matrixSize; row++) {
+                    for (let col = 0; col < matrixSize; col++) {
+                        const x = startX + col * cellSize;
+                        const y = startY + row * cellSize;
+                        
+                        ctx.fillStyle = '#764ba2';
+                        ctx.fillRect(x, y, cellSize - 2, cellSize - 2);
+                        ctx.strokeStyle = '#ffffff';
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(x, y, cellSize - 2, cellSize - 2);
+                        
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = 'bold 24px monospace';
+                        const value = Math.floor(Math.random() * 26);
+                        ctx.fillText(value.toString(), x + cellSize / 2, y + cellSize / 2 + 8);
+                    }
+                }
+                
+                ctx.globalAlpha = 1;
+                ctx.textAlign = 'left';
+                frame++;
+                if (frame < 150) requestAnimationFrame(animate);
+            };
+            animate();
+        }
+        
+        // Matrix Multiplication Visualization
+        function animateMatrixMultiply(stepData, ctx, canvas, desc) {
+            desc.textContent = "Multiplying text blocks with the key matrix (mod 26).";
+            animateGeneric(stepData, ctx, canvas, desc, 'Matrix Multiplication');
+        }
+        
+        // Vigenère Key Visualization
+        function animateVigenereKey(stepData, ctx, canvas, desc) {
+            desc.textContent = "The key is repeated to match the length of the plaintext.";
+            let frame = 0;
+            
+            const animate = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 18px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Vigenère Key Expansion', canvas.width / 2, 40);
+                
+                const plaintext = 'HELLOWORLD';
+                const key = 'KEY';
+                const expandedKey = key.repeat(Math.ceil(plaintext.length / key.length)).substring(0, plaintext.length);
+                
+                const progress = Math.min(plaintext.length, Math.floor(frame / 8));
+                const charWidth = 40;
+                const startX = (canvas.width - plaintext.length * charWidth) / 2;
+                
+                // Draw plaintext
+                ctx.font = '14px sans-serif';
+                ctx.fillText('Plaintext:', startX - 80, 100);
+                for (let i = 0; i < progress; i++) {
+                    const x = startX + i * charWidth;
+                    ctx.fillStyle = '#667eea';
+                    ctx.fillRect(x, 90, charWidth - 2, 40);
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(x, 90, charWidth - 2, 40);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 20px monospace';
+                    ctx.fillText(plaintext[i], x + charWidth / 2, 115);
+                }
+                
+                // Draw expanded key
+                ctx.font = '14px sans-serif';
+                ctx.fillText('Key:', startX - 80, 170);
+                for (let i = 0; i < progress; i++) {
+                    const x = startX + i * charWidth;
+                    const isOriginal = i % key.length === 0 || i < key.length;
+                    ctx.fillStyle = isOriginal ? '#44a08d' : '#44a08d88';
+                    ctx.fillRect(x, 160, charWidth - 2, 40);
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(x, 160, charWidth - 2, 40);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 20px monospace';
+                    ctx.fillText(expandedKey[i], x + charWidth / 2, 185);
+                }
+                
+                ctx.textAlign = 'left';
+                frame++;
+                if (frame < 150) requestAnimationFrame(animate);
+            };
+            animate();
+        }
+        
+        // Vigenère Shift Visualization
+        function animateVigenereShift(stepData, ctx, canvas, desc) {
+            desc.textContent = "Each plaintext letter is shifted by the corresponding key letter.";
+            animateGeneric(stepData, ctx, canvas, desc, 'Caesar Shift');
+        }
+        
+        // Rail Fence Pattern Visualization
+        function animateRailPattern(stepData, ctx, canvas, desc, stepNumber) {
+            desc.textContent = `Rail Fence cipher writes text in a zigzag pattern across rails.`;
+            let frame = 0;
+            
+            const animate = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 18px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(`Rail Fence Pattern (Pass ${stepNumber - 1})`, canvas.width / 2, 30);
+                
+                const text = 'HELLOWORLD';
+                const rails = 3;
+                const charWidth = 50;
+                const railHeight = 80;
+                const startX = (canvas.width - text.length * charWidth) / 2;
+                const startY = 80;
+                
+                const progress = Math.min(text.length, Math.floor(frame / 6));
+                
+                for (let i = 0; i < progress; i++) {
+                    // Calculate rail position (zigzag)
+                    const cycle = 2 * (rails - 1);
+                    const position = i % cycle;
+                    const rail = position < rails ? position : cycle - position;
+                    
+                    const x = startX + i * charWidth;
+                    const y = startY + rail * railHeight;
+                    
+                    // Draw rail line
+                    if (i < progress - 1) {
+                        const nextCycle = (i + 1) % cycle;
+                        const nextRail = nextCycle < rails ? nextCycle : cycle - nextCycle;
+                        const nextY = startY + nextRail * railHeight;
+                        
+                        ctx.strokeStyle = '#4ecdc4';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(x + charWidth / 2, y);
+                        ctx.lineTo(x + charWidth + charWidth / 2, nextY);
+                        ctx.stroke();
+                    }
+                    
+                    // Draw character
+                    ctx.fillStyle = '#667eea';
+                    ctx.beginPath();
+                    ctx.arc(x + charWidth / 2, y, 20, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 16px monospace';
+                    ctx.fillText(text[i], x + charWidth / 2, y + 6);
+                }
+                
+                ctx.textAlign = 'left';
+                frame++;
+                if (frame < 150) requestAnimationFrame(animate);
+            };
+            animate();
+        }
+        
+        // Columnar Grid Visualization
+        function animateColumnarGrid(stepData, ctx, canvas, desc, stepNumber) {
+            desc.textContent = `Columnar transposition rearranges text by reading columns in key order.`;
+            let frame = 0;
+            
+            const animate = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 18px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(`Columnar Transposition (Pass ${stepNumber - 1})`, canvas.width / 2, 30);
+                
+                const text = 'HELLOWORLD';
+                const cols = 4;
+                const rows = Math.ceil(text.length / cols);
+                const cellSize = 50;
+                const startX = (canvas.width - cols * cellSize) / 2;
+                const startY = 80;
+                
+                const progress = Math.min(text.length, Math.floor(frame / 6));
+                
+                for (let i = 0; i < progress; i++) {
+                    const row = Math.floor(i / cols);
+                    const col = i % cols;
+                    const x = startX + col * cellSize;
+                    const y = startY + row * cellSize;
+                    
+                    ctx.fillStyle = '#764ba2';
+                    ctx.fillRect(x, y, cellSize - 2, cellSize - 2);
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(x, y, cellSize - 2, cellSize - 2);
+                    
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 20px monospace';
+                    ctx.fillText(text[i], x + cellSize / 2, y + cellSize / 2 + 8);
+                }
+                
+                // Draw column numbers (key order)
+                ctx.font = '14px sans-serif';
+                const keyOrder = [3, 1, 4, 2]; // Example key order
+                for (let col = 0; col < cols; col++) {
+                    const x = startX + col * cellSize;
+                    ctx.fillStyle = '#4ecdc4';
+                    ctx.fillText(`Key: ${keyOrder[col]}`, x + cellSize / 2, startY - 10);
                 }
                 
                 ctx.textAlign = 'left';
