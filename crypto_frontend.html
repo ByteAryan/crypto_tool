@@ -57,6 +57,40 @@
                         text-align: center; transition: transform 0.3s; }
         .download-btn:hover { transform: scale(1.05); }
         .download-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        /* Animation Modal Styles */
+        .animation-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                          background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);
+                          display: flex; align-items: center; justify-content: center;
+                          z-index: 10000; animation: fadeIn 0.3s ease; }
+        .animation-container { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                              border-radius: 20px; padding: 40px; max-width: 800px; width: 90%;
+                              max-height: 90vh; overflow-y: auto; position: relative;
+                              box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+        .animation-canvas { width: 100%; height: 400px; background: rgba(0,0,0,0.2);
+                           border-radius: 15px; margin: 20px 0; display: block; }
+        .animation-description { text-align: center; font-size: 16px; line-height: 1.6;
+                                color: rgba(255,255,255,0.9); margin-top: 20px; }
+        .close-btn { position: absolute; top: 20px; right: 30px; font-size: 40px;
+                    color: white; cursor: pointer; background: none; border: none;
+                    line-height: 1; transition: transform 0.3s; }
+        .close-btn:hover { transform: rotate(90deg); }
+        .info-btn { background: linear-gradient(45deg, #667eea, #764ba2);
+                   border: none; color: white; width: 30px; height: 30px;
+                   border-radius: 50%; cursor: pointer; font-size: 16px;
+                   display: flex; align-items: center; justify-content: center;
+                   transition: all 0.3s; margin-left: auto; }
+        .info-btn:hover { transform: scale(1.1); box-shadow: 0 5px 15px rgba(102,126,234,0.5); }
+        
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+        @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes slideIn { from { transform: translateX(-100%); opacity: 0; }
+                            to { transform: translateX(0); opacity: 1; } }
+        @keyframes float { 0%, 100% { transform: translateY(0); }
+                          50% { transform: translateY(-10px); } }
+        .particle { position: absolute; width: 4px; height: 4px; background: #4ecdc4;
+                   border-radius: 50%; pointer-events: none; }
     </style>
 </head>
 <body>
@@ -145,6 +179,8 @@
             ecdh: null,
             hash: null
         };
+        let currentSimulation = null;  // Store current simulation data
+        let currentSimulationTitle = null;
 
         function toggleInputMode() {
             const mode = document.querySelector('input[name="inputMode"]:checked').value;
@@ -322,6 +358,9 @@
         }
 
         function displaySimulation(title, simulation) {
+            currentSimulation = simulation;  // Store for animations
+            currentSimulationTitle = title;
+            
             document.getElementById('simulationTitle').textContent = title;
             const panel = document.getElementById('simulationPanel');
             const stepsContainer = document.getElementById('simulationSteps');
@@ -350,6 +389,7 @@
                     <div class="sim-step-header">
                         <div class="sim-step-number">${step.step}</div>
                         <div class="sim-step-name">${step.name}</div>
+                        <button class="info-btn" onclick="showAnimation(${index}, event)" title="Show Animation">ℹ️</button>
                     </div>
                     <div class="sim-step-desc">${step.description}</div>
                     <div class="sim-data">${dataHTML}</div>
@@ -445,6 +485,1627 @@ ${result.hash}
             document.body.appendChild(element);
             element.click();
             document.body.removeChild(element);
+        }
+        
+        // Animation System
+        function showAnimation(stepIndex, event) {
+            event.stopPropagation();
+            
+            if (!currentSimulation || !currentSimulation.steps[stepIndex]) {
+                console.error('No simulation data available');
+                return;
+            }
+            
+            const step = currentSimulation.steps[stepIndex];
+            const stepNumber = step.step;
+            const stepName = step.name;
+            const stepDesc = step.description;
+            const stepData = step.data;
+            
+            const modal = document.createElement('div');
+            modal.className = 'animation-modal';
+            modal.innerHTML = `
+                <div class="animation-container">
+                    <button class="close-btn" onclick="this.parentElement.parentElement.remove()">×</button>
+                    <h2 style="text-align: center; margin-bottom: 10px;">Step ${stepNumber}: ${stepName}</h2>
+                    <p style="text-align: center; color: rgba(255,255,255,0.8); margin-bottom: 20px;">${stepDesc}</p>
+                    <canvas id="animCanvas" class="animation-canvas"></canvas>
+                    <p class="animation-description" id="animDesc"></p>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) modal.remove();
+            });
+            
+            setTimeout(() => {
+                const canvas = document.getElementById('animCanvas');
+                animateStep(currentSimulationTitle, stepNumber, stepName, stepData, canvas);
+            }, 100);
+        }
+        
+        function animateStep(title, stepNumber, stepName, stepData, canvas) {
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            const desc = document.getElementById('animDesc');
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Determine animation based on title and step
+            if (title.includes('AES')) {
+                animateAESStep(stepNumber, stepName, stepData, ctx, canvas, desc);
+            } else if (title.includes('RSA')) {
+                animateRSAStep(stepNumber, stepName, stepData, ctx, canvas, desc);
+            } else if (title.includes('ECDH')) {
+                animateECDHStep(stepNumber, stepName, stepData, ctx, canvas, desc);
+            } else if (title.includes('Hash')) {
+                animateHashStep(stepNumber, stepName, stepData, ctx, canvas, desc);
+            }
+        }
+        
+        // AES Animation Functions
+        function animateAESStep(stepNumber, stepName, stepData, ctx, canvas, desc) {
+            switch(stepNumber) {
+                case 1: // Input Preparation
+                    animateTextToHex(stepData, ctx, canvas, desc);
+                    break;
+                case 2: // Key & IV Setup
+                    animateKeyGeneration(stepData, ctx, canvas, desc);
+                    break;
+                case 3: // Block Division
+                    animateBlockDivision(stepData, ctx, canvas, desc);
+                    break;
+                case 4: // Cipher Initialization
+                    animateCipherInit(stepData, ctx, canvas, desc);
+                    break;
+                case 5: // Encryption Process
+                    animateXOROperation(stepData, ctx, canvas, desc);
+                    break;
+                case 6: // Authentication Tag
+                    animateHashTree(stepData, ctx, canvas, desc);
+                    break;
+                case 7: // Final Output
+                    animateAssembly(stepData, ctx, canvas, desc);
+                    break;
+            }
+        }
+        
+        // RSA Animation Functions
+        function animateRSAStep(stepNumber, stepName, stepData, ctx, canvas, desc) {
+            switch(stepNumber) {
+                case 1: // Input Validation
+                    animateSizeCheck(stepData, ctx, canvas, desc);
+                    break;
+                case 2: // Key Pair Generation
+                    animatePrimeSearch(stepData, ctx, canvas, desc);
+                    break;
+                case 3: // OAEP Padding Setup
+                case 4: // Apply OAEP Padding
+                    animatePadding(stepData, ctx, canvas, desc);
+                    break;
+                case 5: // Encryption
+                    animateModularExp(stepData, ctx, canvas, desc);
+                    break;
+                default:
+                    animateGeneric(stepData, ctx, canvas, desc, stepName);
+            }
+        }
+        
+        // ECDH Animation Functions
+        function animateECDHStep(stepNumber, stepName, stepData, ctx, canvas, desc) {
+            switch(stepNumber) {
+                case 1: // Curve Selection
+                    animateEllipticCurve(stepData, ctx, canvas, desc);
+                    break;
+                case 2: // Private Key Generation
+                case 3: // Public Key Calculation
+                case 4: // Key Exchange
+                    animateCurvePoint(stepData, ctx, canvas, desc, stepNumber);
+                    break;
+                case 5: // Shared Secret
+                    animateKeyMatch(stepData, ctx, canvas, desc);
+                    break;
+                default:
+                    animateGeneric(stepData, ctx, canvas, desc, stepName);
+            }
+        }
+        
+        // Hash Animation Functions
+        function animateHashStep(stepNumber, stepName, stepData, ctx, canvas, desc) {
+            switch(stepNumber) {
+                case 1: // Input Processing
+                    animateFunnel(stepData, ctx, canvas, desc);
+                    break;
+                case 2:
+                case 3:
+                case 4: // Compression Rounds
+                    animateCompression(stepData, ctx, canvas, desc, stepNumber);
+                    break;
+                case 5: // Avalanche Effect
+                    animateAvalanche(stepData, ctx, canvas, desc);
+                    break;
+                case 6: // Final Hash
+                    animateCrystallization(stepData, ctx, canvas, desc);
+                    break;
+                default:
+                    animateGeneric(stepData, ctx, canvas, desc, stepName);
+            }
+        }
+        
+        // Specific Animation Implementations
+        function animateTextToHex(stepData, ctx, canvas, desc) {
+            desc.textContent = "Your input data is converted to bytes and then to hexadecimal representation.";
+            let frame = 0;
+            
+            // Get actual plaintext from hex
+            let displayText = "";
+            let hexBytes = [];
+            
+            if (stepData.plaintext_hex) {
+                const hexStr = stepData.plaintext_hex;
+                // Convert hex to text (first 40 chars for display)
+                try {
+                    for (let i = 0; i < Math.min(hexStr.length, 40); i += 2) {
+                        const byte = parseInt(hexStr.substr(i, 2), 16);
+                        hexBytes.push(hexStr.substr(i, 2).toUpperCase());
+                        if (byte >= 32 && byte <= 126) {  // Printable ASCII
+                            displayText += String.fromCharCode(byte);
+                        } else {
+                            displayText += '.';
+                        }
+                    }
+                } catch (e) {
+                    displayText = "[Binary Data]";
+                }
+            }
+            
+            displayText = displayText.substring(0, 20) || "DATA";
+            const textChars = displayText.split('');
+            
+            const animate = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Title
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 18px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Your Input Data', canvas.width / 2, 30);
+                ctx.font = '12px monospace';
+                ctx.fillText(`Length: ${stepData.plaintext_length} bytes`, canvas.width / 2, 50);
+                
+                const charsToShow = Math.min(textChars.length, 10);
+                const startX = (canvas.width - charsToShow * 65) / 2;
+                
+                for (let i = 0; i < charsToShow; i++) {
+                    const x = startX + i * 65;
+                    const y = 120;
+                    const progress = Math.max(0, Math.min(1, (frame - i * 5) / 40));
+                    
+                    // Draw character
+                    ctx.globalAlpha = 1;
+                    ctx.fillStyle = '#667eea';
+                    ctx.fillRect(x, y, 50, 50);
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(x, y, 50, 50);
+                    
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 24px monospace';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(textChars[i], x + 25, y + 33);
+                    
+                    // Draw arrow
+                    if (progress > 0.3) {
+                        ctx.strokeStyle = '#4ecdc4';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(x + 25, y + 50);
+                        ctx.lineTo(x + 25, y + 80);
+                        ctx.stroke();
+                        // Arrow head
+                        ctx.beginPath();
+                        ctx.moveTo(x + 20, y + 75);
+                        ctx.lineTo(x + 25, y + 80);
+                        ctx.lineTo(x + 30, y + 75);
+                        ctx.stroke();
+                    }
+                    
+                    // Draw hex
+                    if (progress > 0.6 && hexBytes[i]) {
+                        ctx.fillStyle = '#44a08d';
+                        ctx.fillRect(x, y + 90, 50, 50);
+                        ctx.strokeStyle = '#ffffff';
+                        ctx.strokeRect(x, y + 90, 50, 50);
+                        
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = 'bold 16px monospace';
+                        ctx.fillText('0x' + hexBytes[i], x + 25, y + 120);
+                    }
+                }
+                
+                // Show sample hex output at bottom
+                if (frame > 50 && stepData.plaintext_preview) {
+                    ctx.globalAlpha = 1;
+                    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                    ctx.fillRect(20, canvas.height - 80, canvas.width - 40, 60);
+                    ctx.strokeStyle = '#4ecdc4';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(20, canvas.height - 80, canvas.width - 40, 60);
+                    
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = '10px monospace';
+                    ctx.textAlign = 'left';
+                    ctx.fillText('Hex Output: ' + stepData.plaintext_preview, 30, canvas.height - 50);
+                    ctx.textAlign = 'center';
+                }
+                
+                ctx.textAlign = 'left';
+                ctx.globalAlpha = 1;
+                frame++;
+                if (frame < 150) requestAnimationFrame(animate);
+            };
+            animate();
+        }
+        
+        function animateKeyGeneration(stepData, ctx, canvas, desc) {
+            desc.textContent = "Your cryptographic keys are generated using a secure random number generator.";
+            let frame = 0;
+            const keyBits = stepData.key_bits || 256;
+            const ivBits = stepData.iv_bits || 96;
+            const keyHex = stepData.key_hex || '';
+            const ivHex = stepData.iv_hex || '';
+            
+            const particles = [];
+            
+            for (let i = 0; i < 100; i++) {
+                particles.push({
+                    x: Math.random() * canvas.width,
+                    y: -50,
+                    speed: 2 + Math.random() * 3,
+                    size: 2 + Math.random() * 3,
+                    hue: Math.random() * 60 + 160
+                });
+            }
+            
+            const animate = () => {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Title
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 18px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Generating Your Keys', canvas.width / 2, 30);
+                
+                particles.forEach((p, i) => {
+                    p.y += p.speed;
+                    if (p.y > canvas.height + 50) {
+                        p.y = -50;
+                        p.x = Math.random() * canvas.width;
+                    }
+                    
+                    ctx.fillStyle = `hsl(${p.hue}, 80%, 60%)`;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Draw actual random hex digits from keys
+                    if (frame % 5 === 0 && keyHex) {
+                        const hexIndex = Math.floor(Math.random() * keyHex.length);
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = '12px monospace';
+                        ctx.fillText(keyHex[hexIndex], p.x, p.y);
+                    }
+                });
+                
+                // Draw key boxes
+                const progress = Math.min(1, frame / 100);
+                
+                // Key box
+                ctx.fillStyle = 'rgba(68, 160, 141, 0.3)';
+                ctx.fillRect(50, canvas.height - 150, canvas.width - 100, 60);
+                ctx.strokeStyle = '#44a08d';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(50, canvas.height - 150, canvas.width - 100, 60);
+                
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 14px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(`🔑 Encryption Key (${keyBits}-bit)`, canvas.width / 2, canvas.height - 130);
+                
+                if (progress > 0.3 && keyHex) {
+                    ctx.font = '10px monospace';
+                    const keyDisplay = keyHex.substring(0, 48) + '...';
+                    ctx.fillText(keyDisplay, canvas.width / 2, canvas.height - 110);
+                }
+                
+                // IV box
+                ctx.fillStyle = 'rgba(78, 205, 196, 0.3)';
+                ctx.fillRect(50, canvas.height - 80, canvas.width - 100, 60);
+                ctx.strokeStyle = '#4ecdc4';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(50, canvas.height - 80, canvas.width - 100, 60);
+                
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 14px sans-serif';
+                ctx.fillText(`🎲 Initialization Vector (${ivBits}-bit)`, canvas.width / 2, canvas.height - 60);
+                
+                if (progress > 0.5 && ivHex) {
+                    ctx.font = '10px monospace';
+                    const ivDisplay = ivHex.substring(0, 32) + '...';
+                    ctx.fillText(ivDisplay, canvas.width / 2, canvas.height - 40);
+                }
+                
+                ctx.textAlign = 'left';
+                frame++;
+                if (frame < 200) requestAnimationFrame(animate);
+            };
+            animate();
+        }
+        
+        function animateBlockDivision(stepData, ctx, canvas, desc) {
+            desc.textContent = "Your data is divided into fixed-size blocks for encryption.";
+            let frame = 0;
+            const blockCount = Math.min(8, parseInt(stepData.total_blocks) || 5);
+            const blockSize = stepData.block_size || 16;
+            const plaintextHex = stepData.plaintext_hex || '';
+            const blockWidth = Math.min(100, (canvas.width - 100) / blockCount);
+            const blockHeight = 60;
+            
+            // Extract actual data blocks 
+            const dataBlocks = [];
+            for (let i = 0; i < blockCount; i++) {
+                const start = i * blockSize * 2; // 2 hex chars per byte
+                const blockHex = plaintextHex.substring(start, start + blockSize * 2);
+                dataBlocks.push(blockHex);
+            }
+            
+            const animate = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Title
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 18px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(`Dividing Your Data into ${blockCount} Blocks`, canvas.width / 2, 30);
+                ctx.font = '12px sans-serif';
+                ctx.fillText(`Block size: ${blockSize} bytes each`, canvas.width / 2, 50);
+                
+                const progress = Math.min(1, frame / 80);
+                const startX = canvas.width / 2 - (blockCount * blockWidth) / 2;
+                const splitProgress = Math.min(1, Math.max(0, (frame - 20) / 60));
+                
+                if (progress < 0.3) {
+                    // Show original data block
+                    ctx.fillStyle = '#667eea';
+                    ctx.fillRect(startX, 100, blockCount * blockWidth, blockHeight);
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(startX, 100, blockCount * blockWidth, blockHeight);
+                    
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = '10px monospace';
+                    ctx.textAlign = 'center';
+                    const dataPreview = plaintextHex.substring(0, 32) + '...';
+                    ctx.fillText(dataPreview, startX + (blockCount * blockWidth) / 2, 135);
+                } else {
+                    // Draw divided blocks
+                    for (let i = 0; i < blockCount; i++) {
+                        const offsetY = splitProgress * 120;
+                        const offsetX = (i - (blockCount - 1) / 2) * splitProgress * 20;
+                        
+                        ctx.fillStyle = `hsl(${230 + i * 20}, 70%, 60%)`;
+                        ctx.fillRect(startX + i * blockWidth + offsetX, 100 + offsetY, blockWidth - 4, blockHeight);
+                        ctx.strokeStyle = '#ffffff';
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(startX + i * blockWidth + offsetX, 100 + offsetY, blockWidth - 4, blockHeight);
+                        
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = 'bold 12px sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(`#${i + 1}`, startX + i * blockWidth + offsetX + blockWidth / 2, 100 + offsetY + 25);
+                        
+                        // Show actual block data
+                        if (dataBlocks[i]) {
+                            ctx.font = '8px monospace';
+                            const blockPreview = dataBlocks[i].substring(0, 8) + '...';
+                            ctx.fillText(blockPreview, startX + i * blockWidth + offsetX + blockWidth / 2, 100 + offsetY + 45);
+                        }
+                    }
+                }
+                
+                // Draw cutting lines
+                if (progress > 0.1 && progress < 0.5) {
+                    ctx.strokeStyle = '#ff6b6b';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([5, 5]);
+                    for (let i = 1; i < blockCount; i++) {
+                        ctx.beginPath();
+                        ctx.moveTo(startX + i * blockWidth, 80);
+                        ctx.lineTo(startX + i * blockWidth, 180);
+                        ctx.stroke();
+                    }
+                    ctx.setLineDash([]);
+                }
+                
+                ctx.textAlign = 'left';
+                frame++;
+                if (frame < 120) requestAnimationFrame(animate);
+            };
+            animate();
+        }
+        
+        function animateCipherInit(stepData, ctx, canvas, desc) {
+            desc.textContent = "The cipher is initialized with the encryption algorithm, mode, key, and IV.";
+            let frame = 0;
+            const algorithm = stepData.algorithm || 'AES-256-GCM';
+            const mode = stepData.mode || 'GCM';
+            
+            const animate = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                const progress = Math.min(1, frame / 80);
+                
+                // Draw gear shapes
+                const algoName = algorithm.split('-')[0];
+                const modeName = mode || algorithm.split('-').pop();
+                const gears = [
+                    { x: canvas.width / 2 - 100, y: canvas.height / 2, radius: 50, teeth: 12, rotation: frame * 0.02, label: algoName },
+                    { x: canvas.width / 2 + 100, y: canvas.height / 2, radius: 50, teeth: 12, rotation: -frame * 0.02, label: modeName }
+                ];
+                
+                gears.forEach(gear => {
+                    ctx.save();
+                    ctx.translate(gear.x, gear.y);
+                    ctx.rotate(gear.rotation);
+                    
+                    // Draw gear
+                    ctx.fillStyle = '#4ecdc4';
+                    ctx.beginPath();
+                    for (let i = 0; i < gear.teeth * 2; i++) {
+                        const angle = (Math.PI * 2 / (gear.teeth * 2)) * i;
+                        const r = i % 2 === 0 ? gear.radius : gear.radius * 0.8;
+                        const x = Math.cos(angle) * r;
+                        const y = Math.sin(angle) * r;
+                        if (i === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    }
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    
+                    // Center circle
+                    ctx.fillStyle = '#667eea';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, gear.radius * 0.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.restore();
+                    
+                    // Label
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 16px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(gear.label, gear.x, gear.y + 5);
+                });
+                
+                // Draw connecting elements
+                if (progress > 0.5) {
+                    ctx.strokeStyle = '#44a08d';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(gears[0].x + gears[0].radius, gears[0].y);
+                    ctx.lineTo(gears[1].x - gears[1].radius, gears[1].y);
+                    ctx.stroke();
+                }
+                
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 20px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('🔧 Cipher Initialization', canvas.width / 2, 50);
+                ctx.textAlign = 'left';
+                
+                frame++;
+                if (frame < 200) requestAnimationFrame(animate);
+            };
+            animate();
+        }
+        
+        function animateXOROperation(stepData, ctx, canvas, desc) {
+            desc.textContent = "Your data is encrypted using XOR operations with the key stream.";
+            let frame = 0;
+            const ciphertextHex = stepData.ciphertext_hex || '';
+            const timeMs = stepData.time_ms || '0';
+            
+            // Get some actual bytes to display
+            const plaintextHex = currentSimulation.steps[0].data.plaintext_hex || '';
+            const actualBytes = [];
+            for (let i = 0; i < Math.min(16, plaintextHex.length / 2); i++) {
+                const byte = plaintextHex.substring(i * 2, i * 2 + 2).toUpperCase();
+                actualBytes.push(byte);
+            }
+            
+            const outputBytes = [];
+            for (let i = 0; i < Math.min(16, ciphertextHex.length / 2); i++) {
+                const byte = ciphertextHex.substring(i * 2, i * 2 + 2).toUpperCase();
+                outputBytes.push(byte);
+            }
+            
+            const animate = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Title
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 18px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Encrypting Your Data', canvas.width / 2, 30);
+                
+                const y1 = 90;
+                const y2 = 150;
+                const y3 = 250;
+                const displayCount = Math.min(8, actualBytes.length);
+                const startX = (canvas.width - displayCount * 70) / 2;
+                
+                // Draw encryption operation
+                for (let i = 0; i < displayCount; i++) {
+                    const x = startX + i * 70;
+                    const progress = Math.max(0, Math.min(1, (frame - i * 5) / 40));
+                    
+                    // Top stream (plaintext)
+                    ctx.globalAlpha = 1;
+                    ctx.fillStyle = '#667eea';
+                    ctx.fillRect(x, y1, 52, 40);
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(x, y1, 52, 40);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 11px monospace';
+                    ctx.textAlign = 'center';
+                    if (actualBytes[i]) {
+                        ctx.fillText(actualBytes[i], x + 26, y1 + 25);
+                    }
+                    
+                    // Key stream (showing as random-looking)
+                    ctx.fillStyle = '#4ecdc4';
+                    ctx.fillRect(x, y2, 52, 40);
+                    ctx.strokeRect(x, y2, 52, 40);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillText('KEY', x + 26, y2 + 25);
+                    
+                    // XOR symbol
+                    if (progress > 0.3) {
+                        ctx.globalAlpha = 1;
+                        ctx.font = 'bold 24px monospace';
+                        ctx.fillText('⊕', x + 26, y2 + 60);
+                    }
+                    
+                    // Result (ciphertext)
+                    if (progress > 0.6 && outputBytes[i]) {
+                        ctx.fillStyle = '#44a08d';
+                        ctx.fillRect(x, y3, 52, 40);
+                        ctx.strokeRect(x, y3, 52, 40);
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = 'bold 11px monospace';
+                        ctx.fillText(outputBytes[i], x + 26, y3 + 25);
+                        
+                        // Spark effect
+                        const sparkSize = Math.sin(frame * 0.2) * 3 + 3;
+                        ctx.fillStyle = '#ffff00';
+                        ctx.beginPath();
+                        ctx.arc(x + 26, y2 + 70, sparkSize, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+                
+                // Show encryption time and data info
+                ctx.globalAlpha = 1;
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 14px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(`⚡ Encryption completed in ${timeMs} ms`, canvas.width / 2, 330);
+                ctx.font = '11px monospace';
+                ctx.fillText(`Output: ${ciphertextHex.substring(0, 40)}...`, canvas.width / 2, 355);
+                
+                ctx.textAlign = 'left';
+                frame++;
+                if (frame < 150) requestAnimationFrame(animate);
+            };
+            animate();
+        }
+        
+        function animateHashTree(stepData, ctx, canvas, desc) {
+            desc.textContent = "Your authentication tag is computed from the encrypted data to ensure integrity.";
+            let frame = 0;
+            const tagBits = stepData.tag_bits || 128;
+            const tagHex = stepData.tag_hex || '';
+            
+            const animate = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                const progress = Math.min(1, frame / 100);
+                
+                // Title
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 18px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Generating Authentication Tag', canvas.width / 2, 30);
+                
+                // Draw data blocks
+                const blocks = 8;
+                for (let i = 0; i < blocks; i++) {
+                    const x = 50 + i * 70;
+                    const y = 300;
+                    ctx.fillStyle = '#667eea';
+                    ctx.fillRect(x, y, 50, 40);
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(x, y, 50, 40);
+                    
+                    // Show actual ciphertext bytes
+                    const ciphertextHex = currentSimulation.steps[4].data.ciphertext_hex || '';
+                    const byte = ciphertextHex.substring(i * 2, i * 2 + 2).toUpperCase();
+                    if (byte) {
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = '10px monospace';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(byte, x + 25, y + 25);
+                    }
+                    
+                    // Draw hash lines going up
+                    if (progress > i * 0.1) {
+                        ctx.strokeStyle = '#4ecdc4';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(x + 25, y);
+                        ctx.lineTo(canvas.width / 2, 150 * progress + 80);
+                        ctx.stroke();
+                    }
+                }
+                
+                // Draw tag at top
+                if (progress > 0.7) {
+                    const tagWidth = 400;
+                    const tagHeight = 80;
+                    const tagX = canvas.width / 2 - tagWidth / 2;
+                    const tagY = 100;
+                    
+                    ctx.fillStyle = '#44a08d';
+                    ctx.fillRect(tagX, tagY, tagWidth, tagHeight);
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(tagX, tagY, tagWidth, tagHeight);
+                    
+                    // Glow effect
+                    ctx.shadowBlur = 20;
+                    ctx.shadowColor = '#4ecdc4';
+                    ctx.strokeRect(tagX, tagY, tagWidth, tagHeight);
+                    ctx.shadowBlur = 0;
+                    
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 16px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`🔒 Authentication Tag (${tagBits}-bit)`, canvas.width / 2, tagY + 30);
+                    
+                    if (tagHex) {
+                        ctx.font = '10px monospace';
+                        const line1 = tagHex.substring(0, 32);
+                        const line2 = tagHex.substring(32, 64);
+                        ctx.fillText(line1, canvas.width / 2, tagY + 50);
+                        if (line2) ctx.fillText(line2, canvas.width / 2, tagY + 65);
+                    }
+                }
+                
+                ctx.textAlign = 'left';
+                frame++;
+                if (frame < 120) requestAnimationFrame(animate);
+            };
+            animate();
+        }
+        
+        function animateAssembly(stepData, ctx, canvas, desc) {
+            desc.textContent = "All components (IV, ciphertext, and authentication tag) are combined into the final output.";
+            let frame = 0;
+            const totalSize = stepData.total_output_size || 'N/A';
+            const expansion = stepData.expansion_bytes || 0;
+            
+            const components = [
+                { label: 'IV', color: '#667eea', startY: 50 },
+                { label: 'Ciphertext', color: '#4ecdc4', startY: 150 },
+                { label: 'Auth Tag', color: '#44a08d', startY: 250 }
+            ];
+            
+            const animate = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                const progress = Math.min(1, frame / 100);
+                
+                components.forEach((comp, i) => {
+                    const delay = i * 0.2;
+                    const compProgress = Math.max(0, Math.min(1, (progress - delay) / 0.6));
+                    
+                    const startX = 100;
+                    const endX = canvas.width / 2 - 75;
+                    const endY = canvas.height / 2 - 25;
+                    
+                    const currentX = startX + (endX - startX) * compProgress;
+                    const currentY = comp.startY + (endY - comp.startY) * compProgress;
+                    
+                    ctx.fillStyle = comp.color;
+                    ctx.fillRect(currentX, currentY, 150, 50);
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(currentX, currentY, 150, 50);
+                    
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 14px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(comp.label, currentX + 75, currentY + 30);
+                });
+                
+                // Draw final output box
+                if (progress > 0.8) {
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 4;
+                    ctx.setLineDash([10, 5]);
+                    ctx.strokeRect(canvas.width / 2 - 100, canvas.height / 2 - 50, 200, 150);
+                    ctx.setLineDash([]);
+                    
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 16px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('📦 Final Output', canvas.width / 2, canvas.height / 2 + 110);
+                    ctx.font = '12px sans-serif';
+                    ctx.fillText(`Total: ${totalSize} bytes (+${expansion} overhead)`, canvas.width / 2, canvas.height / 2 + 130);
+                }
+                
+                ctx.textAlign = 'left';
+                frame++;
+                if (frame < 150) requestAnimationFrame(animate);
+            };
+            animate();
+        }
+        
+        function animateSizeCheck(stepData, ctx, canvas, desc) {
+            desc.textContent = "RSA can only encrypt data smaller than the key size minus padding overhead (190 bytes for 2048-bit RSA).";
+            let frame = 0;
+            const dataSize = parseInt(stepData.plaintext_length) || 150;
+            const maxSize = parseInt(stepData.max_allowed) || 190;
+            const isValid = stepData.size_check === 'Valid';
+            
+            const animate = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                const progress = Math.min(1, frame / 80);
+                
+                // Draw scale
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(100, canvas.height / 2);
+                ctx.lineTo(canvas.width - 100, canvas.height / 2);
+                ctx.stroke();
+                
+                // Draw markers
+                const maxSize = 190;
+                const markerPos = 100 + (canvas.width - 200) * 0.7;
+                ctx.strokeStyle = '#ff6b6b';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.moveTo(markerPos, canvas.height / 2 - 20);
+                ctx.lineTo(markerPos, canvas.height / 2 + 20);
+                ctx.stroke();
+                
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '14px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('190 bytes MAX', markerPos, canvas.height / 2 + 40);
+                
+                // Draw data block
+                const dataPos = 100 + (canvas.width - 200) * (dataSize / 256) * progress;
+                ctx.fillStyle = isValid ? '#44a08d' : '#ff6b6b';
+                ctx.fillRect(100, canvas.height / 2 - 30, dataPos - 100, 60);
+                
+                // Show actual size
+                ctx.font = '14px sans-serif';
+                ctx.fillStyle = '#ffffff';
+                ctx.textAlign = 'center';
+                ctx.fillText(`${dataSize} bytes`, dataPos / 2 + 50, canvas.height / 2 + 60);
+                
+                // Status
+                ctx.font = 'bold 24px sans-serif';
+                ctx.fillStyle = isValid ? '#44a08d' : '#ff6b6b';
+                ctx.fillText(isValid ? '✓ Valid Size' : '✗ Too Large', canvas.width / 2, 80);
+                
+                ctx.textAlign = 'left';
+                frame++;
+                if (frame < 120) requestAnimationFrame(animate);
+            };
+            animate();
+        }
+        
+        function animatePrimeSearch(stepData, ctx, canvas, desc) {
+            desc.textContent = "Large prime numbers are found using probabilistic primality tests for the RSA key pair.";
+            let frame = 0;
+            const keySize = stepData.key_size || '2048 bits';
+            const genTime = stepData.generation_time_ms || '0';
+            const numbers = [];
+            
+            for (let i = 0; i < 50; i++) {
+                numbers.push({
+                    value: Math.floor(Math.random() * 1000) + 100,
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    isPrime: Math.random() > 0.9,
+                    speed: 1 + Math.random() * 2
+                });
+            }
+            
+            const animate = () => {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                numbers.forEach(num => {
+                    num.x += (Math.random() - 0.5) * num.speed;
+                    num.y += (Math.random() - 0.5) * num.speed;
+                    
+                    // Keep in bounds
+                    if (num.x < 0) num.x = canvas.width;
+                    if (num.x > canvas.width) num.x = 0;
+                    if (num.y < 0) num.y = canvas.height;
+                    if (num.y > canvas.height) num.y = 0;
+                    
+                    ctx.fillStyle = num.isPrime ? '#44a08d' : '#667eea';
+                    ctx.font = num.isPrime ? 'bold 16px monospace' : '12px monospace';
+                    ctx.fillText(num.value, num.x, num.y);
+                    
+                    // Highlight primes
+                    if (num.isPrime) {
+                        ctx.strokeStyle = '#4ecdc4';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.arc(num.x + 15, num.y - 5, 20, 0, Math.PI * 2);
+                        ctx.stroke();
+                    }
+                });
+                
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 20px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('🔍 Searching for Prime Numbers...', canvas.width / 2, 30);
+                ctx.font = '14px sans-serif';
+                ctx.fillText(`Key Size: ${keySize} | Gen Time: ${genTime} ms`, canvas.width / 2, canvas.height - 20);
+                ctx.textAlign = 'left';
+                
+                frame++;
+                if (frame < 200) requestAnimationFrame(animate);
+            };
+            animate();
+        }
+        
+        function animatePadding(stepData, ctx, canvas, desc) {
+            desc.textContent = "OAEP padding adds randomized padding to the plaintext for security.";
+            let frame = 0;
+            const originalSize = parseInt(stepData.original_size) || 150;
+            const paddedSize = parseInt(stepData.padded_size) || 256;
+            const paddingOverhead = paddedSize - originalSize;
+            
+            const animate = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                const progress = Math.min(1, frame / 100);
+                
+                // Original data
+                const dataWidth = 120;
+                const dataX = canvas.width / 2 - 60;
+                const dataY = canvas.height / 2 - 30;
+                
+                ctx.fillStyle = '#667eea';
+                ctx.fillRect(dataX, dataY, dataWidth, 60);
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(dataX, dataY, dataWidth, 60);
+                
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 14px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Data', dataX + dataWidth / 2, dataY + 35);
+                
+                // Padding expanding
+                const maxPadding = 140;
+                const currentPadding = maxPadding * progress;
+                
+                // Left padding
+                ctx.fillStyle = 'rgba(78, 205, 196, 0.5)';
+                ctx.fillRect(dataX - currentPadding, dataY, currentPadding, 60);
+                ctx.strokeRect(dataX - currentPadding, dataY, currentPadding, 60);
+                
+                // Right padding
+                ctx.fillRect(dataX + dataWidth, dataY, currentPadding, 60);
+                ctx.strokeRect(dataX + dataWidth, dataY, currentPadding, 60);
+                
+                // Random pattern in padding
+                if (progress > 0.3) {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = '10px monospace';
+                    for (let i = 0; i < currentPadding / 15; i++) {
+                        ctx.fillText(Math.random() > 0.5 ? '1' : '0', dataX - currentPadding + i * 15, dataY + 30);
+                        ctx.fillText(Math.random() > 0.5 ? '1' : '0', dataX + dataWidth + i * 15, dataY + 30);
+                    }
+                }
+                
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 16px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('🛡️ OAEP Padding Applied', canvas.width / 2, 80);
+                ctx.font = '12px sans-serif';
+                ctx.fillText(`Original: ${originalSize}B → Padded: ${paddedSize}B (+${paddingOverhead}B)`, canvas.width / 2, canvas.height - 30);
+                ctx.textAlign = 'left';
+                
+                frame++;
+                if (frame < 150) requestAnimationFrame(animate);
+            };
+            animate();
+        }
+        
+        function animateModularExp(stepData, ctx, canvas, desc) {
+            desc.textContent = "Modular exponentiation (m^e mod n) is the core mathematical operation in RSA encryption.";
+            let frame = 0;
+            const ciphertextSize = stepData.ciphertext_size || 256;
+            const encryptTime = stepData.encryption_time_ms || '0';
+            
+            const animate = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Draw formula
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 32px serif';
+                ctx.textAlign = 'center';
+                
+                const opacity = Math.min(1, frame / 40);
+                ctx.globalAlpha = opacity;
+                ctx.fillText('c = m', canvas.width / 2 - 80, canvas.height / 2 - 20);
+                
+                // Exponent
+                ctx.font = '20px serif';
+                ctx.fillText('e', canvas.width / 2 - 30, canvas.height / 2 - 40);
+                
+                ctx.font = 'bold 32px serif';
+                ctx.fillText('mod n', canvas.width / 2 + 50, canvas.height / 2 - 20);
+                
+                // Animated calculation
+                if (frame > 50) {
+                    const value = Math.floor(Math.random() * 999999);
+                    ctx.font = '16px monospace';
+                    ctx.fillStyle = '#4ecdc4';
+                    ctx.fillText(`Computing: ${value}...`, canvas.width / 2, canvas.height / 2 + 50);
+                    ctx.font = '12px sans-serif';
+                    ctx.fillText(`Output: ${ciphertextSize}B | Time: ${encryptTime}ms`, canvas.width / 2, canvas.height / 2 + 80);
+                }
+                
+                // Gears or calculation symbols
+                const angle = frame * 0.05;
+                for (let i = 0; i < 3; i++) {
+                    const x = canvas.width / 2 + Math.cos(angle + i * Math.PI * 2 / 3) * 100;
+                    const y = canvas.height / 2 + 100 + Math.sin(angle + i * Math.PI * 2 / 3) * 50;
+                    
+                    ctx.fillStyle = 'rgba(102, 126, 234, 0.5)';
+                    ctx.beginPath();
+                    ctx.arc(x, y, 15, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                ctx.globalAlpha = 1;
+                ctx.textAlign = 'left';
+                frame++;
+                if (frame < 200) requestAnimationFrame(animate);
+            };
+            animate();
+        }
+        
+        function animateEllipticCurve(stepData, ctx, canvas, desc) {
+            desc.textContent = "An elliptic curve (y² = x³ + ax + b) provides the mathematical foundation for ECDH.";
+            let frame = 0;
+            const curveName = stepData.curve_name || 'secp256r1';
+            const keySize = stepData.key_size || '256 bits';
+            
+            const animate = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Draw axes
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(canvas.width / 2, 0);
+                ctx.lineTo(canvas.width / 2, canvas.height);
+                ctx.moveTo(0, canvas.height / 2);
+                ctx.lineTo(canvas.width, canvas.height / 2);
+                ctx.stroke();
+                
+                // Draw elliptic curve
+                ctx.strokeStyle = '#4ecdc4';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                
+                const points = [];
+                const progress = Math.min(1, frame / 100);
+                for (let x = -3; x <= 3; x += 0.05) {
+                    // Simplified elliptic curve visualization
+                    const y = Math.sqrt(Math.abs(x * x * x - x + 1));
+                    if (!isNaN(y)) {
+                        const screenX = canvas.width / 2 + x * 80;
+                        const screenY1 = canvas.height / 2 - y * 80;
+                        const screenY2 = canvas.height / 2 + y * 80;
+                        
+                        if (x <= -3 + progress * 6) {
+                            points.push({ x: screenX, y: screenY1 });
+                            points.push({ x: screenX, y: screenY2 });
+                        }
+                    }
+                }
+                
+                points.sort((a, b) => a.x - b.x || a.y - b.y);
+                points.forEach((p, i) => {
+                    if (i === 0) ctx.moveTo(p.x, p.y);
+                    else ctx.lineTo(p.x, p.y);
+                });
+                ctx.stroke();
+                
+                // Draw some points on curve
+                if (progress > 0.7) {
+                    ctx.fillStyle = '#ff6b6b';
+                    for (let i = 0; i < 5; i++) {
+                        const angle = i * Math.PI * 0.4;
+                        const r = 80 + Math.sin(angle * 2) * 40;
+                        const px = canvas.width / 2 + Math.cos(angle) * r;
+                        const py = canvas.height / 2 + Math.sin(angle) * r * 0.6;
+                        
+                        ctx.beginPath();
+                        ctx.arc(px, py, 5, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+                
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 18px serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('y² = x³ + ax + b', canvas.width / 2, 40);
+                ctx.font = '14px sans-serif';
+                ctx.fillText(`Curve: ${curveName} (${keySize})`, canvas.width / 2, 70);
+                ctx.textAlign = 'left';
+                
+                frame++;
+                if (frame < 150) requestAnimationFrame(animate);
+            };
+            animate();
+        }
+        
+        function animateCurvePoint(stepData, ctx, canvas, desc, stepNumber) {
+            desc.textContent = "Point multiplication on the elliptic curve generates public keys from private keys.";
+            let frame = 0;
+            const keyLength = stepData.public_key_length || stepData.private_key_length || 32;
+            
+            const animate = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Simplified curve
+                ctx.strokeStyle = '#4ecdc4';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                for (let x = 0; x < canvas.width; x += 5) {
+                    const normalized = (x / canvas.width) * 6 - 3;
+                    const y = Math.sin(normalized) * 100 + canvas.height / 2;
+                    if (x === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+                
+                // Animate point moving along curve
+                const progress = (frame % 120) / 120;
+                const x = progress * canvas.width;
+                const normalized = (x / canvas.width) * 6 - 3;
+                const y = Math.sin(normalized) * 100 + canvas.height / 2;
+                
+                // Base point
+                ctx.fillStyle = '#ff6b6b';
+                ctx.beginPath();
+                ctx.arc(100, Math.sin(-2.8) * 100 + canvas.height / 2, 8, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '12px sans-serif';
+                ctx.fillText('G (base)', 105, Math.sin(-2.8) * 100 + canvas.height / 2);
+                
+                // Moving point
+                ctx.fillStyle = '#44a08d';
+                ctx.beginPath();
+                ctx.arc(x, y, 8, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Trail
+                ctx.strokeStyle = 'rgba(68, 160, 141, 0.3)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(100, Math.sin(-2.8) * 100 + canvas.height / 2);
+                ctx.lineTo(x, y);
+                ctx.stroke();
+                
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 16px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(`🔑 Point Multiplication: k * G`, canvas.width / 2, 40);
+                ctx.font = '12px sans-serif';
+                ctx.fillText(`Key length: ${keyLength} bytes`, canvas.width / 2, 60);
+                ctx.textAlign = 'left';
+                
+                frame++;
+                if (frame < 240) requestAnimationFrame(animate);
+            };
+            animate();
+        }
+        
+        function animateKeyMatch(stepData, ctx, canvas, desc) {
+            desc.textContent = "Both parties compute the same shared secret using their private key and the other's public key.";
+            let frame = 0;
+            const sharedKeyLength = stepData.shared_key_length || 32;
+            const keyAgreement = stepData.key_agreement || 'ECDH';
+            
+            const animate = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                const progress = Math.min(1, frame / 100);
+                
+                // Draw two sides
+                const leftX = 100;
+                const rightX = canvas.width - 150;
+                const y = canvas.height / 2;
+                
+                // Alice side
+                ctx.fillStyle = '#667eea';
+                ctx.beginPath();
+                ctx.arc(leftX, y, 50, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 16px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Alice', leftX, y + 5);
+                
+                // Bob side
+                ctx.fillStyle = '#764ba2';
+                ctx.beginPath();
+                ctx.arc(rightX, y, 50, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText('Bob', rightX, y + 5);
+                
+                // Keys moving toward center
+                if (progress > 0.2) {
+                    const centerX = canvas.width / 2;
+                    const keyProgress = Math.min(1, (progress - 0.2) / 0.6);
+                    
+                    const leftKeyX = leftX + (centerX - leftX) * keyProgress;
+                    const rightKeyX = rightX - (rightX - centerX) * keyProgress;
+                    
+                    // Alice's key
+                    ctx.fillStyle = '#4ecdc4';
+                    ctx.fillRect(leftKeyX - 15, y - 80, 30, 40);
+                    ctx.fillText('🔑', leftKeyX, y - 55);
+                    
+                    // Bob's key
+                    ctx.fillRect(rightKeyX - 15, y - 80, 30, 40);
+                    ctx.fillText('🔑', rightKeyX, y - 55);
+                    
+                    // Merge effect
+                    if (progress > 0.8) {
+                        ctx.fillStyle = '#44a08d';
+                        ctx.shadowBlur = 20;
+                        ctx.shadowColor = '#44a08d';
+                        ctx.beginPath();
+                        ctx.arc(centerX, y - 60, 30, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.shadowBlur = 0;
+                        
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = 'bold 24px sans-serif';
+                        ctx.fillText('🔐', centerX, y - 50);
+                        
+                        ctx.font = 'bold 14px sans-serif';
+                        ctx.fillText('Shared Secret', centerX, y + 90);
+                        ctx.font = '12px sans-serif';
+                        ctx.fillText(`${keyAgreement} | ${sharedKeyLength} bytes`, centerX, y + 110);
+                    }
+                }
+                
+                ctx.textAlign = 'left';
+                frame++;
+                if (frame < 150) requestAnimationFrame(animate);
+            };
+            animate();
+        }
+        
+        function animateFunnel(stepData, ctx, canvas, desc) {
+            desc.textContent = "Your input data flows into the hash function.";
+            let frame = 0;
+            const inputLength = stepData.input_length || stepData.plaintext_length || 0;
+            const algorithm = stepData.algorithm || 'SHA-256';
+            
+            // Get actual input hex to display
+            let inputHex = '';
+            if (stepData.input_hex || stepData.plaintext_hex) {
+                inputHex = (stepData.input_hex || stepData.plaintext_hex).substring(0, 40);
+            }
+            
+            const particles = [];
+            
+            // Create particles with actual data bits
+            for (let i = 0; i < 100; i++) {
+                particles.push({
+                    x: Math.random() * canvas.width,
+                    y: -Math.random() * 200,
+                    speed: 2 + Math.random() * 3,
+                    size: 2 + Math.random() * 3,
+                    char: inputHex ? inputHex[Math.floor(Math.random() * inputHex.length)] : '0'
+                });
+            }
+            
+            const animate = () => {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Title
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 18px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Processing Your Data', canvas.width / 2, 30);
+                ctx.font = '12px sans-serif';
+                ctx.fillText(`Input: ${inputLength} bytes`, canvas.width / 2, 50);
+                
+                // Draw funnel
+                ctx.strokeStyle = '#4ecdc4';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(canvas.width / 2 - 150, 70);
+                ctx.lineTo(canvas.width / 2 - 30, canvas.height - 80);
+                ctx.lineTo(canvas.width / 2 + 30, canvas.height - 80);
+                ctx.lineTo(canvas.width / 2 + 150, 70);
+                ctx.stroke();
+                
+                // Output box
+                ctx.fillStyle = '#44a08d';
+                ctx.fillRect(canvas.width / 2 - 60, canvas.height - 80, 120, 60);
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(canvas.width / 2 - 60, canvas.height - 80, 120, 60);
+                
+                // Particles with actual data
+                particles.forEach(p => {
+                    p.y += p.speed;
+                    
+                    // Funnel effect
+                    const funnelTop = 70;
+                    const funnelBottom = canvas.height - 80;
+                    if (p.y > funnelTop && p.y < funnelBottom) {
+                        const relativeY = (p.y - funnelTop) / (funnelBottom - funnelTop);
+                        const funnelWidth = 300 - relativeY * 240;
+                        const funnelCenter = canvas.width / 2;
+                        const maxDist = funnelWidth / 2;
+                        
+                        if (Math.abs(p.x - funnelCenter) > maxDist) {
+                            p.x += (funnelCenter - p.x) * 0.1;
+                        }
+                    }
+                    
+                    if (p.y > canvas.height) {
+                        p.y = -10;
+                        p.x = Math.random() * canvas.width;
+                    }
+                    
+                    ctx.fillStyle = '#4ecdc4';
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Show actual hex chars
+                    if (frame % 3 === 0) {
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = '10px monospace';
+                        ctx.fillText(p.char, p.x - 3, p.y + 3);
+                    }
+                });
+                
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 16px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(`${algorithm}`, canvas.width / 2, canvas.height - 50);
+                ctx.textAlign = 'left';
+                
+                frame++;
+                if (frame < 300) requestAnimationFrame(animate);
+            };
+            animate();
+        }
+        
+        function animateCompression(stepData, ctx, canvas, desc, stepNumber) {
+            desc.textContent = "Data is compressed through multiple rounds of mixing and transformation.";
+            let frame = 0;
+            const blocksProcessed = stepData.blocks_processed || stepNumber - 1;
+            const blockSize = stepData.block_size_bytes || 64;
+            
+            const animate = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                const blocks = 8;
+                const blockWidth = 60;
+                const blockHeight = 50;
+                const startY = 100;
+                const spacing = (canvas.width - blocks * blockWidth) / (blocks + 1);
+                
+                for (let i = 0; i < blocks; i++) {
+                    const x = spacing + i * (blockWidth + spacing);
+                    const wave = Math.sin(frame * 0.1 + i * 0.5) * 10;
+                    const y = startY + wave;
+                    
+                    // Color shifts
+                    const hue = (180 + frame * 2 + i * 30) % 360;
+                    ctx.fillStyle = `hsl(${hue}, 70%, 60%)`;
+                    ctx.fillRect(x, y, blockWidth, blockHeight);
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(x, y, blockWidth, blockHeight);
+                    
+                    // Mixing arrows
+                    if (i < blocks - 1 && frame % 20 < 10) {
+                        ctx.strokeStyle = '#ffff00';
+                        ctx.lineWidth = 3;
+                        ctx.beginPath();
+                        ctx.moveTo(x + blockWidth, y + blockHeight / 2);
+                        ctx.lineTo(x + blockWidth + spacing, y + blockHeight / 2);
+                        ctx.stroke();
+                        
+                        // Arrow head
+                        ctx.beginPath();
+                        ctx.moveTo(x + blockWidth + spacing - 10, y + blockHeight / 2 - 5);
+                        ctx.lineTo(x + blockWidth + spacing, y + blockHeight / 2);
+                        ctx.lineTo(x + blockWidth + spacing - 10, y + blockHeight / 2 + 5);
+                        ctx.stroke();
+                    }
+                }
+                
+                // Compressed output
+                const outputY = 280;
+                const outputWidth = 200;
+                const compressProgress = Math.min(1, frame / 100);
+                
+                ctx.fillStyle = '#44a08d';
+                ctx.fillRect(canvas.width / 2 - outputWidth / 2, outputY, outputWidth * compressProgress, 60);
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(canvas.width / 2 - outputWidth / 2, outputY, outputWidth, 60);
+                
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 16px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(`Round ${blocksProcessed}`, canvas.width / 2, 50);
+                ctx.font = '12px sans-serif';
+                ctx.fillText(`Block size: ${blockSize} bytes`, canvas.width / 2, 70);
+                ctx.fillText('Compressed', canvas.width / 2, outputY + 38);
+                ctx.textAlign = 'left';
+                
+                frame++;
+                if (frame < 150) requestAnimationFrame(animate);
+            };
+            animate();
+        }
+        
+        function animateAvalanche(stepData, ctx, canvas, desc) {
+            desc.textContent = "Changing just one bit in the input causes approximately half the output bits to flip (avalanche effect).";
+            let frame = 0;
+            const changedBits = stepData.bits_changed || 'many';
+            
+            const animate = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                const gridSize = 16;
+                const cellSize = 20;
+                const startX = canvas.width / 2 - (gridSize * cellSize) / 2;
+                const startY = 100;
+                
+                // Draw bit grid
+                for (let i = 0; i < gridSize; i++) {
+                    for (let j = 0; j < gridSize; j++) {
+                        const x = startX + i * cellSize;
+                        const y = startY + j * cellSize;
+                        
+                        // Distance from center
+                        const centerI = gridSize / 2;
+                        const centerJ = gridSize / 2;
+                        const dist = Math.sqrt((i - centerI) ** 2 + (j - centerJ) ** 2);
+                        
+                        // Propagation effect
+                        const threshold = frame * 0.15;
+                        const shouldFlip = dist < threshold;
+                        
+                        ctx.fillStyle = shouldFlip ? (Math.random() > 0.5 ? '#ff6b6b' : '#4ecdc4') : '#667eea';
+                        ctx.fillRect(x, y, cellSize - 2, cellSize - 2);
+                    }
+                }
+                
+                // Highlight: center bit change
+                if (frame < 30) {
+                    ctx.strokeStyle = '#ffff00';
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(startX + (gridSize / 2) * cellSize - 2, 
+                                  startY + (gridSize / 2) * cellSize - 2, 
+                                  cellSize + 2, cellSize + 2);
+                }
+                
+                // Ripple effect
+                if (frame < 60) {
+                    const rippleRadius = frame * 8;
+                    ctx.strokeStyle = `rgba(255, 255, 255, ${1 - frame / 60})`;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(canvas.width / 2, startY + (gridSize * cellSize) / 2, rippleRadius, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+                
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 16px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('1 Bit Changed → Cascading Changes', canvas.width / 2, 60);
+                ctx.font = '12px sans-serif';
+                ctx.fillText(`Approximately ${changedBits} bits affected`, canvas.width / 2, canvas.height - 20);
+                ctx.textAlign = 'left';
+                
+                frame++;
+                if (frame < 120) requestAnimationFrame(animate);
+            };
+            animate();
+        }
+        
+        function animateCrystallization(stepData, ctx, canvas, desc) {
+            desc.textContent = "Your final hash value solidifies into a fixed-size output.";
+            let frame = 0;
+            const hashLength = stepData.hash_length || 32;
+            const hashBits = hashLength * 8;
+            const hashValue = stepData.hash_value || stepData.sha256_hash || '';
+            
+            // Get actual input data to show transformation
+            let inputPreview = 'Your Data';
+            if (currentSimulation && currentSimulation.steps[0]) {
+                const inputHex = currentSimulation.steps[0].data.plaintext_hex || currentSimulation.steps[0].data.input_hex || '';
+                inputPreview = inputHex.substring(0, 20) + '...';
+            }
+            
+            const animate = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                const progress = Math.min(1, frame / 100);
+                
+                // Title
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 18px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Generating Your Hash', canvas.width / 2, 30);
+                
+                // Show input data flowing
+                if (frame < 60) {
+                    ctx.font = '10px monospace';
+                    ctx.fillText(`Input: ${inputPreview}`, canvas.width / 2, 60);
+                }
+                
+                // Flowing data particles at top
+                for (let i = 0; i < 20; i++) {
+                    const x = (i * 40 + frame * 3) % canvas.width;
+                    const y = 80 + Math.sin(frame * 0.1 + i) * 10;
+                    
+                    ctx.fillStyle = `hsl(${(frame + i * 20) % 360}, 70%, 60%)`;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                // Crystallization center
+                const centerX = canvas.width / 2;
+                const centerY = canvas.height / 2 + 20;
+                const crystals = 8;
+                
+                for (let i = 0; i < crystals; i++) {
+                    const angle = (Math.PI * 2 / crystals) * i;
+                    const length = progress * 80;
+                    const x1 = centerX + Math.cos(angle) * 20;
+                    const y1 = centerY + Math.sin(angle) * 20;
+                    const x2 = centerX + Math.cos(angle) * length;
+                    const y2 = centerY + Math.sin(angle) * length;
+                    
+                    ctx.strokeStyle = '#4ecdc4';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(x1, y1);
+                    ctx.lineTo(x2, y2);
+                    ctx.stroke();
+                    
+                    // Crystal tips
+                    ctx.fillStyle = '#44a08d';
+                    ctx.beginPath();
+                    ctx.arc(x2, y2, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                // Center hexagon
+                ctx.fillStyle = '#667eea';
+                ctx.beginPath();
+                for (let i = 0; i < 6; i++) {
+                    const angle = (Math.PI / 3) * i;
+                    const x = centerX + Math.cos(angle) * 25 * progress;
+                    const y = centerY + Math.sin(angle) * 25 * progress;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                if (progress > 0.7) {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 14px monospace';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`${hashBits}-bit`, centerX, centerY + 5);
+                }
+                
+                // Show actual hash value at bottom
+                if (progress > 0.8 && hashValue) {
+                    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                    ctx.fillRect(50, canvas.height - 90, canvas.width - 100, 70);
+                    ctx.strokeStyle = '#44a08d';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(50, canvas.height - 90, canvas.width - 100, 70);
+                    
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 14px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('💎 Your Final Hash:', canvas.width / 2, canvas.height - 65);
+                    ctx.font = '9px monospace';
+                    // Split hash into two lines for better display
+                    const line1 = hashValue.substring(0, 32);
+                    const line2 = hashValue.substring(32, 64);
+                    ctx.fillText(line1, canvas.width / 2, canvas.height - 45);
+                    if (line2) ctx.fillText(line2, canvas.width / 2, canvas.height - 30);
+                }
+                ctx.textAlign = 'left';
+                
+                frame++;
+                if (frame < 150) requestAnimationFrame(animate);
+            };
+            animate();
+        }
+        
+        function animateGeneric(stepData, ctx, canvas, desc, stepName) {
+            desc.textContent = `Processing: ${stepName}`;
+            let frame = 0;
+            
+            const animate = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Generic processing animation
+                const bars = 8;
+                for (let i = 0; i < bars; i++) {
+                    const x = (canvas.width / bars) * i + 20;
+                    const height = Math.abs(Math.sin(frame * 0.05 + i * 0.5)) * 200 + 50;
+                    const y = canvas.height / 2 - height / 2;
+                    
+                    ctx.fillStyle = `hsl(${(frame * 2 + i * 40) % 360}, 70%, 60%)`;
+                    ctx.fillRect(x, y, canvas.width / bars - 40, height);
+                }
+                
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 20px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('⚙️ Processing...', canvas.width / 2, 50);
+                ctx.textAlign = 'left';
+                
+                frame++;
+                if (frame < 150) requestAnimationFrame(animate);
+            };
+            animate();
         }
     </script>
 </body>
