@@ -229,6 +229,32 @@
         let currentSimulation = null;  // Store current simulation data
         let currentSimulationTitle = null;
 
+        // Utility function to sanitize filenames for cross-platform compatibility
+        function sanitizeFilename(filename) {
+            if (!filename) return 'file';
+            
+            // Remove any path separators (both Windows and Unix)
+            // HTML5 File API should already provide basename, but handle edge cases
+            let sanitized = filename.replace(/^.*[\\\/]/, '');
+            
+            // Remove or replace invalid characters
+            sanitized = sanitized.replace(/[<>:"|?*\x00-\x1f]/g, '_');
+            
+            // Limit length
+            if (sanitized.length > 200) {
+                const lastDot = sanitized.lastIndexOf('.');
+                if (lastDot > 0) {
+                    const ext = sanitized.substring(lastDot);
+                    const name = sanitized.substring(0, 200 - ext.length);
+                    sanitized = name + ext;
+                } else {
+                    sanitized = sanitized.substring(0, 200);
+                }
+            }
+            
+            return sanitized || 'file';
+        }
+
         function toggleInputMode() {
             const mode = document.querySelector('input[name="inputMode"]:checked').value;
             document.getElementById('textInputGroup').style.display = mode === 'text' ? 'block' : 'none';
@@ -255,7 +281,8 @@
             const file = document.getElementById('fileInput').files[0];
             if (file) {
                 selectedFile = file;
-                document.getElementById('fileName').textContent = file.name;
+                const safeName = sanitizeFilename(file.name);
+                document.getElementById('fileName').textContent = safeName;
                 document.getElementById('fileSize').textContent = formatFileSize(file.size);
                 document.getElementById('fileType').textContent = file.type || 'unknown';
                 document.getElementById('fileInfo').style.display = 'block';
@@ -285,7 +312,8 @@
                             data: encryptedData
                         };
                         
-                        document.getElementById('encryptedFileName').textContent = file.name;
+                        const safeName = sanitizeFilename(file.name);
+                        document.getElementById('encryptedFileName').textContent = safeName;
                         document.getElementById('encryptedFileSize').textContent = formatFileSize(file.size);
                         document.getElementById('encryptedAlgorithm').textContent = encryptedData.algorithm || 'Unknown';
                         document.getElementById('encryptedFileInfo').style.display = 'block';
@@ -396,11 +424,16 @@
                 const a = document.createElement('a');
                 a.style.display = 'none';
                 a.href = url;
-                a.download = 'decrypted_' + (decryptedData.originalName || 'file.txt');
+                const originalName = decryptedData.originalName || 'file.txt';
+                a.download = sanitizeFilename('decrypted_' + originalName);
                 document.body.appendChild(a);
                 a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
+                
+                // Cleanup with slight delay to ensure download starts (Windows compatibility)
+                setTimeout(() => {
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                }, 100);
             } catch (error) {
                 alert('Error downloading decrypted file: ' + error.message);
             }
@@ -428,16 +461,29 @@
                 return new Promise((resolve, reject) => {
                     const reader = new FileReader();
                     reader.onload = (e) => {
-                        const arrayBuffer = e.target.result;
-                        const bytes = new Uint8Array(arrayBuffer);
-                        const base64 = btoa(String.fromCharCode.apply(null, bytes));
-                        resolve({
-                            data: base64,
-                            name: selectedFile.name,
-                            size: selectedFile.size,
-                            type: 'file',
-                            mimeType: selectedFile.type
-                        });
+                        try {
+                            const arrayBuffer = e.target.result;
+                            const bytes = new Uint8Array(arrayBuffer);
+                            
+                            // Convert Uint8Array to base64 in chunks to avoid call stack issues on Windows
+                            let binary = '';
+                            const chunkSize = 8192; // Process 8KB at a time
+                            for (let i = 0; i < bytes.length; i += chunkSize) {
+                                const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length));
+                                binary += String.fromCharCode.apply(null, chunk);
+                            }
+                            const base64 = btoa(binary);
+                            
+                            resolve({
+                                data: base64,
+                                name: sanitizeFilename(selectedFile.name),
+                                size: selectedFile.size,
+                                type: 'file',
+                                mimeType: selectedFile.type
+                            });
+                        } catch (error) {
+                            reject(new Error('Failed to process file: ' + error.message));
+                        }
                     };
                     reader.onerror = () => reject(new Error('Failed to read file'));
                     reader.readAsArrayBuffer(selectedFile);
@@ -643,7 +689,7 @@
                 if (contentDisposition) {
                     const filenameMatch = contentDisposition.match(/filename="?(.+)"?/i);
                     if (filenameMatch && filenameMatch[1]) {
-                        filename = filenameMatch[1];
+                        filename = sanitizeFilename(filenameMatch[1]);
                     }
                 }
                 
@@ -656,9 +702,11 @@
                 document.body.appendChild(a);
                 a.click();
                 
-                // Clean up
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
+                // Clean up with slight delay to ensure download starts (Windows compatibility)
+                setTimeout(() => {
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                }, 100);
                 
             } catch (error) {
                 alert('Error downloading binary file: ' + error.message);

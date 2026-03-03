@@ -4,6 +4,8 @@ import secrets
 import time
 import io
 import json
+import os
+import re
 import numpy as np
 from cryptography.hazmat.backends import default_backend
 from algorithms import aes, symmetric, classical, ecc
@@ -11,6 +13,35 @@ from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import hashes, serialization
 
 app = Flask(__name__)
+
+# Utility function for cross-platform filename sanitization
+def sanitize_filename(filename):
+    """
+    Sanitize filename for cross-platform compatibility (Windows/Mac/Linux).
+    Removes path separators and invalid characters.
+    """
+    if not filename:
+        return 'file'
+    
+    # Extract just the filename (remove any path components)
+    # Handle both Windows (\) and Unix (/) path separators
+    filename = os.path.basename(filename.replace('\\', '/'))
+    
+    # Remove or replace invalid characters for filenames
+    # Windows doesn't allow: < > : " / \ | ? *
+    # Also remove any control characters
+    filename = re.sub(r'[<>:"|?*\\/\x00-\x1f]', '_', filename)
+    
+    # Limit filename length (255 is common limit, leave room for prefix/suffix)
+    if len(filename) > 200:
+        name, ext = os.path.splitext(filename)
+        filename = name[:200-len(ext)] + ext
+    
+    # If filename becomes empty or just dots, use default
+    if not filename or filename.strip('.') == '':
+        return 'file'
+    
+    return filename
 
 @app.after_request
 def after_request(response):
@@ -1306,7 +1337,404 @@ def ecc_simulate():
         return jsonify({'success': False, 'error': str(e)})
 
 
-# Decryption endpoints
+# Decryption endpoints - Individual algorithm endpoints
+@app.route('/api/decrypt-aes', methods=['POST'])
+def decrypt_aes():
+    try:
+        data = request.json
+        encrypted_file = json.loads(data['encryptedFile'])
+        
+        ciphertext = base64.b64decode(encrypted_file['ciphertext'])
+        key = bytes.fromhex(encrypted_file['key'])
+        iv = bytes.fromhex(encrypted_file['iv'])
+        tag = bytes.fromhex(encrypted_file['tag'])
+        
+        start_time = time.time()
+        plaintext = aes.decrypt_gcm(ciphertext, key, iv, tag)
+        decrypt_time = (time.time() - start_time) * 1000
+        
+        # Try to decode as text
+        try:
+            plaintext_text = plaintext.decode('utf-8')
+            is_text = True
+        except:
+            plaintext_text = base64.b64encode(plaintext).decode('utf-8')
+            is_text = False
+        
+        return jsonify({
+            'success': True,
+            'plaintext': plaintext_text,
+            'isText': is_text,
+            'size': len(plaintext),
+            'decryptTime': f"{decrypt_time:.2f}",
+            'originalName': 'decrypted_file'
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@app.route('/api/decrypt-rsa', methods=['POST'])
+def decrypt_rsa():
+    try:
+        data = request.json
+        encrypted_file = json.loads(data['encryptedFile'])
+        
+        ciphertext = base64.b64decode(encrypted_file['ciphertext'])
+        private_key_pem = encrypted_file['private_key'].encode('utf-8')
+        
+        # Load private key
+        private_key = serialization.load_pem_private_key(
+            private_key_pem,
+            password=None,
+            backend=default_backend()
+        )
+        
+        start_time = time.time()
+        plaintext = private_key.decrypt(ciphertext, padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(), label=None
+        ))
+        decrypt_time = (time.time() - start_time) * 1000
+        
+        # Try to decode as text
+        try:
+            plaintext_text = plaintext.decode('utf-8')
+            is_text = True
+        except:
+            plaintext_text = base64.b64encode(plaintext).decode('utf-8')
+            is_text = False
+        
+        return jsonify({
+            'success': True,
+            'plaintext': plaintext_text,
+            'isText': is_text,
+            'size': len(plaintext),
+            'decryptTime': f"{decrypt_time:.2f}",
+            'originalName': 'decrypted_file'
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@app.route('/api/decrypt-des', methods=['POST'])
+def decrypt_des():
+    try:
+        data = request.json
+        encrypted_file = json.loads(data['encryptedFile'])
+        
+        ciphertext = base64.b64decode(encrypted_file['ciphertext'])
+        key = bytes.fromhex(encrypted_file['key'])
+        iv = bytes.fromhex(encrypted_file['iv'])
+        
+        start_time = time.time()
+        plaintext = symmetric.decrypt_des(ciphertext, key, iv)
+        decrypt_time = (time.time() - start_time) * 1000
+        
+        # Try to decode as text
+        try:
+            plaintext_text = plaintext.decode('utf-8')
+            is_text = True
+        except:
+            plaintext_text = base64.b64encode(plaintext).decode('utf-8')
+            is_text = False
+        
+        return jsonify({
+            'success': True,
+            'plaintext': plaintext_text,
+            'isText': is_text,
+            'size': len(plaintext),
+            'decryptTime': f"{decrypt_time:.2f}",
+            'originalName': 'decrypted_file'
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@app.route('/api/decrypt-3des', methods=['POST'])
+def decrypt_3des():
+    try:
+        data = request.json
+        encrypted_file = json.loads(data['encryptedFile'])
+        
+        ciphertext = base64.b64decode(encrypted_file['ciphertext'])
+        key = bytes.fromhex(encrypted_file['key'])
+        iv = bytes.fromhex(encrypted_file['iv'])
+        
+        start_time = time.time()
+        plaintext = symmetric.decrypt_3des(ciphertext, key, iv)
+        decrypt_time = (time.time() - start_time) * 1000
+        
+        # Try to decode as text
+        try:
+            plaintext_text = plaintext.decode('utf-8')
+            is_text = True
+        except:
+            plaintext_text = base64.b64encode(plaintext).decode('utf-8')
+            is_text = False
+        
+        return jsonify({
+            'success': True,
+            'plaintext': plaintext_text,
+            'isText': is_text,
+            'size': len(plaintext),
+            'decryptTime': f"{decrypt_time:.2f}",
+            'originalName': 'decrypted_file'
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@app.route('/api/decrypt-blowfish', methods=['POST'])
+def decrypt_blowfish():
+    try:
+        data = request.json
+        encrypted_file = json.loads(data['encryptedFile'])
+        
+        ciphertext = base64.b64decode(encrypted_file['ciphertext'])
+        key = bytes.fromhex(encrypted_file['key'])
+        iv = bytes.fromhex(encrypted_file['iv'])
+        
+        start_time = time.time()
+        plaintext = symmetric.decrypt_blowfish(ciphertext, key, iv)
+        decrypt_time = (time.time() - start_time) * 1000
+        
+        # Try to decode as text
+        try:
+            plaintext_text = plaintext.decode('utf-8')
+            is_text = True
+        except:
+            plaintext_text = base64.b64encode(plaintext).decode('utf-8')
+            is_text = False
+        
+        return jsonify({
+            'success': True,
+            'plaintext': plaintext_text,
+            'isText': is_text,
+            'size': len(plaintext),
+            'decryptTime': f"{decrypt_time:.2f}",
+            'originalName': 'decrypted_file'
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@app.route('/api/decrypt-chacha20', methods=['POST'])
+def decrypt_chacha20():
+    try:
+        data = request.json
+        encrypted_file = json.loads(data['encryptedFile'])
+        
+        ciphertext = base64.b64decode(encrypted_file['ciphertext'])
+        key = bytes.fromhex(encrypted_file['key'])
+        nonce = bytes.fromhex(encrypted_file['nonce'])
+        
+        start_time = time.time()
+        plaintext = symmetric.decrypt_chacha20(ciphertext, key, nonce)
+        decrypt_time = (time.time() - start_time) * 1000
+        
+        # Try to decode as text
+        try:
+            plaintext_text = plaintext.decode('utf-8')
+            is_text = True
+        except:
+            plaintext_text = base64.b64encode(plaintext).decode('utf-8')
+            is_text = False
+        
+        return jsonify({
+            'success': True,
+            'plaintext': plaintext_text,
+            'isText': is_text,
+            'size': len(plaintext),
+            'decryptTime': f"{decrypt_time:.2f}",
+            'originalName': 'decrypted_file'
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@app.route('/api/decrypt-playfair', methods=['POST'])
+def decrypt_playfair():
+    try:
+        data = request.json
+        encrypted_file = json.loads(data['encryptedFile'])
+        
+        ciphertext = encrypted_file['ciphertext']
+        key = encrypted_file['key']
+        
+        cipher = classical.PlayfairCipher(key)
+        start_time = time.time()
+        plaintext = cipher.decrypt(ciphertext)
+        decrypt_time = (time.time() - start_time) * 1000
+        
+        return jsonify({
+            'success': True,
+            'plaintext': plaintext,
+            'isText': True,
+            'size': len(plaintext),
+            'decryptTime': f"{decrypt_time:.2f}",
+            'originalName': 'decrypted_file'
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@app.route('/api/decrypt-hill', methods=['POST'])
+def decrypt_hill():
+    try:
+        data = request.json
+        encrypted_file = json.loads(data['encryptedFile'])
+        
+        ciphertext = encrypted_file['ciphertext']
+        key_matrix = encrypted_file['keyMatrix']
+        
+        cipher = classical.HillCipher(key_matrix)
+        start_time = time.time()
+        plaintext = cipher.decrypt(ciphertext)
+        decrypt_time = (time.time() - start_time) * 1000
+        
+        return jsonify({
+            'success': True,
+            'plaintext': plaintext,
+            'isText': True,
+            'size': len(plaintext),
+            'decryptTime': f"{decrypt_time:.2f}",
+            'originalName': 'decrypted_file'
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@app.route('/api/decrypt-vigenere', methods=['POST'])
+def decrypt_vigenere():
+    try:
+        data = request.json
+        encrypted_file = json.loads(data['encryptedFile'])
+        
+        ciphertext = encrypted_file['ciphertext']
+        key = encrypted_file['key']
+        
+        cipher = classical.VigenereCipher(key)
+        start_time = time.time()
+        plaintext = cipher.decrypt(ciphertext)
+        decrypt_time = (time.time() - start_time) * 1000
+        
+        return jsonify({
+            'success': True,
+            'plaintext': plaintext,
+            'isText': True,
+            'size': len(plaintext),
+            'decryptTime': f"{decrypt_time:.2f}",
+            'originalName': 'decrypted_file'
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@app.route('/api/decrypt-railfence', methods=['POST'])
+def decrypt_railfence():
+    try:
+        data = request.json
+        encrypted_file = json.loads(data['encryptedFile'])
+        
+        ciphertext = encrypted_file['ciphertext']
+        rails1 = encrypted_file['rails1']
+        rails2 = encrypted_file['rails2']
+        
+        cipher = classical.DoubleRailFenceCipher(rails1, rails2)
+        start_time = time.time()
+        plaintext = cipher.decrypt(ciphertext)
+        decrypt_time = (time.time() - start_time) * 1000
+        
+        return jsonify({
+            'success': True,
+            'plaintext': plaintext,
+            'isText': True,
+            'size': len(plaintext),
+            'decryptTime': f"{decrypt_time:.2f}",
+            'originalName': 'decrypted_file'
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@app.route('/api/decrypt-columnar', methods=['POST'])
+def decrypt_columnar():
+    try:
+        data = request.json
+        encrypted_file = json.loads(data['encryptedFile'])
+        
+        ciphertext = encrypted_file['ciphertext']
+        key1 = encrypted_file['key1']
+        key2 = encrypted_file['key2']
+        
+        cipher = classical.DoubleColumnarTransposition(key1, key2)
+        start_time = time.time()
+        plaintext = cipher.decrypt(ciphertext)
+        decrypt_time = (time.time() - start_time) * 1000
+        
+        return jsonify({
+            'success': True,
+            'plaintext': plaintext,
+            'isText': True,
+            'size': len(plaintext),
+            'decryptTime': f"{decrypt_time:.2f}",
+            'originalName': 'decrypted_file'
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@app.route('/api/decrypt-ecc', methods=['POST'])
+def decrypt_ecc():
+    try:
+        data = request.json
+        encrypted_file = json.loads(data['encryptedFile'])
+        
+        ciphertext = base64.b64decode(encrypted_file['ciphertext'])
+        ephemeral_public_key = bytes.fromhex(encrypted_file['ephemeral_public_key'])
+        iv = bytes.fromhex(encrypted_file['iv'])
+        tag = bytes.fromhex(encrypted_file['tag'])
+        private_key_pem = encrypted_file['private_key'].encode('utf-8')
+        
+        # Load private key
+        private_key = serialization.load_pem_private_key(
+            private_key_pem,
+            password=None,
+            backend=default_backend()
+        )
+        
+        encrypted_data = {
+            'ciphertext': ciphertext,
+            'ephemeral_public_key': ephemeral_public_key,
+            'iv': iv,
+            'tag': tag
+        }
+        
+        start_time = time.time()
+        plaintext = ecc.decrypt_ecc(encrypted_data, private_key)
+        decrypt_time = (time.time() - start_time) * 1000
+        
+        # Try to decode as text
+        try:
+            plaintext_text = plaintext.decode('utf-8')
+            is_text = True
+        except:
+            plaintext_text = base64.b64encode(plaintext).decode('utf-8')
+            is_text = False
+        
+        return jsonify({
+            'success': True,
+            'plaintext': plaintext_text,
+            'isText': is_text,
+            'size': len(plaintext),
+            'decryptTime': f"{decrypt_time:.2f}",
+            'originalName': 'decrypted_file'
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+
+# Generic decrypt endpoint (kept for backward compatibility)
 @app.route('/api/decrypt', methods=['POST'])
 def decrypt_endpoint():
     try:
@@ -1405,6 +1833,415 @@ def decrypt_endpoint():
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
+
+
+# Binary Download Endpoints
+@app.route('/api/download-aes-binary', methods=['POST'])
+def download_aes_binary():
+    try:
+        data = request.json
+        input_bytes = base64.b64decode(data['data']) if data['type'] == 'file' else data['data'].encode('utf-8')
+        key = secrets.token_bytes(32)
+        iv = secrets.token_bytes(12)
+        
+        ciphertext, tag = aes.encrypt_gcm(input_bytes, key, iv)
+        
+        # Create a binary package with all necessary data
+        binary_data = json.dumps({
+            'algorithm': 'AES',
+            'ciphertext': base64.b64encode(ciphertext).decode('utf-8'),
+            'key': key.hex(),
+            'iv': iv.hex(),
+            'tag': tag.hex()
+        }).encode('utf-8')
+        
+        safe_name = sanitize_filename(data.get('name', 'file'))
+        filename = f"encrypted_aes_{safe_name}.enc"
+        
+        return send_file(
+            io.BytesIO(binary_data),
+            mimetype='application/octet-stream',
+            as_attachment=True,
+            download_name=filename
+        )
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
+@app.route('/api/download-rsa-binary', methods=['POST'])
+def download_rsa_binary():
+    try:
+        data = request.json
+        input_bytes = base64.b64decode(data['data']) if data['type'] == 'file' else data['data'].encode('utf-8')
+        
+        if len(input_bytes) > 190:
+            raise Exception(f"RSA max 190 bytes. Input: {len(input_bytes)} bytes")
+        
+        private_key = rsa.generate_private_key(65537, 2048, default_backend())
+        public_key = private_key.public_key()
+        
+        encrypted_data = public_key.encrypt(input_bytes, padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(), label=None
+        ))
+        
+        private_pem = private_key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption()
+        )
+        
+        binary_data = json.dumps({
+            'algorithm': 'RSA',
+            'ciphertext': base64.b64encode(encrypted_data).decode('utf-8'),
+            'private_key': private_pem.decode('utf-8')
+        }).encode('utf-8')
+        
+        safe_name = sanitize_filename(data.get('name', 'file'))
+        filename = f"encrypted_rsa_{safe_name}.enc"
+        
+        return send_file(
+            io.BytesIO(binary_data),
+            mimetype='application/octet-stream',
+            as_attachment=True,
+            download_name=filename
+        )
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
+@app.route('/api/download-des-binary', methods=['POST'])
+def download_des_binary():
+    try:
+        data = request.json
+        input_bytes = base64.b64decode(data['data']) if data['type'] == 'file' else data['data'].encode('utf-8')
+        key = symmetric.generate_des_key()
+        iv = secrets.token_bytes(8)
+        
+        ciphertext = symmetric.encrypt_des(input_bytes, key, iv)
+        
+        binary_data = json.dumps({
+            'algorithm': 'DES',
+            'ciphertext': base64.b64encode(ciphertext).decode('utf-8'),
+            'key': key.hex(),
+            'iv': iv.hex()
+        }).encode('utf-8')
+        
+        safe_name = sanitize_filename(data.get('name', 'file'))
+        filename = f"encrypted_des_{safe_name}.enc"
+        
+        return send_file(
+            io.BytesIO(binary_data),
+            mimetype='application/octet-stream',
+            as_attachment=True,
+            download_name=filename
+        )
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
+@app.route('/api/download-3des-binary', methods=['POST'])
+def download_3des_binary():
+    try:
+        data = request.json
+        input_bytes = base64.b64decode(data['data']) if data['type'] == 'file' else data['data'].encode('utf-8')
+        key = symmetric.generate_3des_key()
+        iv = secrets.token_bytes(8)
+        
+        ciphertext = symmetric.encrypt_3des(input_bytes, key, iv)
+        
+        binary_data = json.dumps({
+            'algorithm': '3DES',
+            'ciphertext': base64.b64encode(ciphertext).decode('utf-8'),
+            'key': key.hex(),
+            'iv': iv.hex()
+        }).encode('utf-8')
+        
+        safe_name = sanitize_filename(data.get('name', 'file'))
+        filename = f"encrypted_3des_{safe_name}.enc"
+        
+        return send_file(
+            io.BytesIO(binary_data),
+            mimetype='application/octet-stream',
+            as_attachment=True,
+            download_name=filename
+        )
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
+@app.route('/api/download-blowfish-binary', methods=['POST'])
+def download_blowfish_binary():
+    try:
+        data = request.json
+        input_bytes = base64.b64decode(data['data']) if data['type'] == 'file' else data['data'].encode('utf-8')
+        key = symmetric.generate_blowfish_key(16)
+        iv = secrets.token_bytes(8)
+        
+        ciphertext = symmetric.encrypt_blowfish(input_bytes, key, iv)
+        
+        binary_data = json.dumps({
+            'algorithm': 'Blowfish',
+            'ciphertext': base64.b64encode(ciphertext).decode('utf-8'),
+            'key': key.hex(),
+            'iv': iv.hex()
+        }).encode('utf-8')
+        
+        safe_name = sanitize_filename(data.get('name', 'file'))
+        filename = f"encrypted_blowfish_{safe_name}.enc"
+        
+        return send_file(
+            io.BytesIO(binary_data),
+            mimetype='application/octet-stream',
+            as_attachment=True,
+            download_name=filename
+        )
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
+@app.route('/api/download-chacha20-binary', methods=['POST'])
+def download_chacha20_binary():
+    try:
+        data = request.json
+        input_bytes = base64.b64decode(data['data']) if data['type'] == 'file' else data['data'].encode('utf-8')
+        key = symmetric.generate_chacha20_key()
+        nonce = symmetric.generate_chacha20_nonce()
+        
+        ciphertext = symmetric.encrypt_chacha20(input_bytes, key, nonce)
+        
+        binary_data = json.dumps({
+            'algorithm': 'ChaCha20',
+            'ciphertext': base64.b64encode(ciphertext).decode('utf-8'),
+            'key': key.hex(),
+            'nonce': nonce.hex()
+        }).encode('utf-8')
+        
+        safe_name = sanitize_filename(data.get('name', 'file'))
+        filename = f"encrypted_chacha20_{safe_name}.enc"
+        
+        return send_file(
+            io.BytesIO(binary_data),
+            mimetype='application/octet-stream',
+            as_attachment=True,
+            download_name=filename
+        )
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
+@app.route('/api/download-playfair-binary', methods=['POST'])
+def download_playfair_binary():
+    try:
+        data = request.json
+        plaintext = data['data'] if data['type'] == 'text' else base64.b64decode(data['data']).decode('utf-8')
+        key = data.get('key', 'KEYWORD')
+        
+        cipher = classical.PlayfairCipher(key)
+        ciphertext = cipher.encrypt(plaintext)
+        
+        binary_data = json.dumps({
+            'algorithm': 'Playfair',
+            'ciphertext': ciphertext,
+            'key': key
+        }).encode('utf-8')
+        
+        safe_name = sanitize_filename(data.get('name', 'file'))
+        filename = f"encrypted_playfair_{safe_name}.enc"
+        
+        return send_file(
+            io.BytesIO(binary_data),
+            mimetype='application/octet-stream',
+            as_attachment=True,
+            download_name=filename
+        )
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
+@app.route('/api/download-hill-binary', methods=['POST'])
+def download_hill_binary():
+    try:
+        data = request.json
+        plaintext = data['data'] if data['type'] == 'text' else base64.b64decode(data['data']).decode('utf-8')
+        key_matrix = data.get('keyMatrix', [[3, 3], [2, 5]])
+        
+        cipher = classical.HillCipher(key_matrix)
+        ciphertext = cipher.encrypt(plaintext)
+        
+        binary_data = json.dumps({
+            'algorithm': 'Hill',
+            'ciphertext': ciphertext,
+            'keyMatrix': key_matrix
+        }).encode('utf-8')
+        
+        safe_name = sanitize_filename(data.get('name', 'file'))
+        filename = f"encrypted_hill_{safe_name}.enc"
+        
+        return send_file(
+            io.BytesIO(binary_data),
+            mimetype='application/octet-stream',
+            as_attachment=True,
+            download_name=filename
+        )
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
+@app.route('/api/download-vigenere-binary', methods=['POST'])
+def download_vigenere_binary():
+    try:
+        data = request.json
+        plaintext = data['data'] if data['type'] == 'text' else base64.b64decode(data['data']).decode('utf-8')
+        key = data.get('key', 'SECRET')
+        
+        cipher = classical.VigenereCipher(key)
+        ciphertext = cipher.encrypt(plaintext)
+        
+        binary_data = json.dumps({
+            'algorithm': 'Vigenere',
+            'ciphertext': ciphertext,
+            'key': key
+        }).encode('utf-8')
+        
+        safe_name = sanitize_filename(data.get('name', 'file'))
+        filename = f"encrypted_vigenere_{safe_name}.enc"
+        
+        return send_file(
+            io.BytesIO(binary_data),
+            mimetype='application/octet-stream',
+            as_attachment=True,
+            download_name=filename
+        )
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
+@app.route('/api/download-railfence-binary', methods=['POST'])
+def download_railfence_binary():
+    try:
+        data = request.json
+        plaintext = data['data'] if data['type'] == 'text' else base64.b64decode(data['data']).decode('utf-8')
+        rails1 = data.get('rails1', 3)
+        rails2 = data.get('rails2', 4)
+        
+        cipher = classical.DoubleRailFenceCipher(rails1, rails2)
+        ciphertext = cipher.encrypt(plaintext)
+        
+        binary_data = json.dumps({
+            'algorithm': 'Double Rail Fence',
+            'ciphertext': ciphertext,
+            'rails1': rails1,
+            'rails2': rails2
+        }).encode('utf-8')
+        
+        safe_name = sanitize_filename(data.get('name', 'file'))
+        filename = f"encrypted_railfence_{safe_name}.enc"
+        
+        return send_file(
+            io.BytesIO(binary_data),
+            mimetype='application/octet-stream',
+            as_attachment=True,
+            download_name=filename
+        )
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
+@app.route('/api/download-columnar-binary', methods=['POST'])
+def download_columnar_binary():
+    try:
+        data = request.json
+        plaintext = data['data'] if data['type'] == 'text' else base64.b64decode(data['data']).decode('utf-8')
+        key1 = data.get('key1', 'HACK')
+        key2 = data.get('key2', 'CRYPTO')
+        
+        cipher = classical.DoubleColumnarTransposition(key1, key2)
+        ciphertext = cipher.encrypt(plaintext)
+        
+        binary_data = json.dumps({
+            'algorithm': 'Double Columnar Transposition',
+            'ciphertext': ciphertext,
+            'key1': key1,
+            'key2': key2
+        }).encode('utf-8')
+        
+        safe_name = sanitize_filename(data.get('name', 'file'))
+        filename = f"encrypted_columnar_{safe_name}.enc"
+        
+        return send_file(
+            io.BytesIO(binary_data),
+            mimetype='application/octet-stream',
+            as_attachment=True,
+            download_name=filename
+        )
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
+@app.route('/api/download-ecc-binary', methods=['POST'])
+def download_ecc_binary():
+    try:
+        data = request.json
+        input_bytes = base64.b64decode(data['data']) if data['type'] == 'file' else data['data'].encode('utf-8')
+        
+        private_key, public_key = ecc.generate_ecc_keypair()
+        encrypted_data = ecc.encrypt_ecc(input_bytes, public_key)
+        
+        # Serialize private key for decryption
+        private_pem = private_key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption()
+        )
+        
+        binary_data = json.dumps({
+            'algorithm': 'ECC',
+            'ciphertext': base64.b64encode(encrypted_data['ciphertext']).decode('utf-8'),
+            'ephemeral_public_key': encrypted_data['ephemeral_public_key'].hex(),
+            'iv': encrypted_data['iv'].hex(),
+            'tag': encrypted_data['tag'].hex(),
+            'private_key': private_pem.decode('utf-8')
+        }).encode('utf-8')
+        
+        safe_name = sanitize_filename(data.get('name', 'file'))
+        filename = f"encrypted_ecc_{safe_name}.enc"
+        
+        return send_file(
+            io.BytesIO(binary_data),
+            mimetype='application/octet-stream',
+            as_attachment=True,
+            download_name=filename
+        )
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
+@app.route('/api/download-decrypted', methods=['POST'])
+def download_decrypted():
+    try:
+        data = request.json
+        plaintext = data.get('plaintext', '')
+        is_text = data.get('isText', True)
+        original_name = data.get('originalName', 'file')
+        
+        # If it's text, use it directly; if binary, decode from base64
+        safe_name = sanitize_filename(original_name) if original_name else 'file'
+        if is_text:
+            file_data = plaintext.encode('utf-8')
+            filename = f"decrypted_{safe_name}.txt"
+        else:
+            file_data = base64.b64decode(plaintext)
+            filename = f"decrypted_{safe_name}"
+        
+        return send_file(
+            io.BytesIO(file_data),
+            mimetype='application/octet-stream',
+            as_attachment=True,
+            download_name=filename
+        )
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
 
 
 if __name__ == '__main__':
